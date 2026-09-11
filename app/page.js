@@ -2,140 +2,132 @@
 
 import { useState } from 'react';
 
-const vehicles = [
-  { name: 'VSAV 01', type: 'Secours à personne', status: 'Disponible', icon: '🚑' },
-  { name: 'VSR 01', type: 'Secours routier', status: 'Disponible', icon: '🚒' },
-  { name: 'FPT 01', type: 'Incendie', status: 'Disponible', icon: '🚒' },
-];
-
 export default function Home() {
-  const [screen, setScreen] = useState('home');
-  const [selected, setSelected] = useState(['VSAV 01', 'VSR 01']);
-  const [mission, setMission] = useState('En attente');
-
-  const toggleVehicle = (name) => {
-    setSelected((current) =>
-      current.includes(name) ? current.filter((v) => v !== name) : [...current, name]
-    );
-  };
-
-  const engage = () => {
-    if (!selected.length) return;
-    setMission('Moyens engagés');
-  };
-
-  if (screen === 'home') {
-    return (
-      <main className="landing">
-        <section className="hero">
-          <div className="brand">🚒 <span>CTA 18</span></div>
-          <div className="eyebrow">CENTRE DE TRAITEMENT DES ALERTES</div>
-          <h1>Prenez le commandement des interventions.</h1>
-          <p>
-            Recevez les alertes, analysez la situation, engagez vos moyens et développez
-            votre centre opérationnel.
-          </p>
-          <div className="heroActions">
-            <button className="primary" onClick={() => setScreen('cta')}>Entrer au CTA</button>
-            <button className="secondary" onClick={() => setScreen('cta')}>Découvrir le jeu</button>
-          </div>
-          <div className="features">
-            <span>📻 Alertes</span><span>🚒 Véhicules</span><span>👨‍🚒 Effectifs</span><span>🗺️ Interventions</span>
-          </div>
-        </section>
-      </main>
-    );
-  }
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <main className="game">
-      <header className="topbar">
-        <button className="logoButton" onClick={() => setScreen('home')}>🚒 <strong>CTA 18</strong></button>
-        <div className="topStatus"><span className="liveDot" /> SYSTÈME OPÉRATIONNEL</div>
-        <div className="operator">👨‍🚒 Commandant</div>
+    <main>
+      <header className="nav">
+        <a className="logo" href="#accueil" aria-label="CTA 18">
+          <span className="logoMark"><span></span><span></span><span></span></span>
+          <span>CTA <b>18</b></span>
+        </a>
+
+        <nav className={menuOpen ? 'navLinks open' : 'navLinks'}>
+          <a href="#jeu" onClick={() => setMenuOpen(false)}>Le jeu</a>
+          <a href="#univers" onClick={() => setMenuOpen(false)}>L'univers</a>
+          <a href="#commencer" onClick={() => setMenuOpen(false)}>Commencer</a>
+        </nav>
+
+        <div className="navActions">
+          <button className="login">Connexion</button>
+          <a className="navPlay" href="#commencer">Jouer maintenant</a>
+          <button className="menuButton" onClick={() => setMenuOpen(!menuOpen)} aria-label="Menu">
+            <i></i><i></i>
+          </button>
+        </div>
       </header>
 
-      <section className="dashboard">
-        <div className="titleRow">
-          <div>
-            <p className="eyebrow red">CENTRE OPÉRATIONNEL</p>
-            <h2>Tableau de commandement</h2>
+      <section className="heroNew" id="accueil">
+        <div className="heroGlow"></div>
+        <div className="heroGrid"></div>
+
+        <div className="heroCopy">
+          <div className="liveBadge"><span></span> SIMULATION OPÉRATIONNELLE</div>
+          <h1>Quand l'alerte retentit,<br /><em>vous décidez.</em></h1>
+          <p>
+            Prenez place au cœur du centre opérationnel. Analysez les appels,
+            engagez les secours et construisez votre propre histoire.
+          </p>
+
+          <div className="heroButtons" id="commencer">
+            <a className="mainCta" href="#jeu">
+              <span className="ctaIcon">▶</span>
+              Commencer l'aventure
+            </a>
+            <a className="ghostCta" href="#jeu">Découvrir CTA 18 <span>↘</span></a>
           </div>
-          <div className="clock">📻 CTA EN SERVICE</div>
+
+          <div className="heroMeta">
+            <div><b>24/7</b><span>Centre opérationnel</span></div>
+            <div><b>∞</b><span>Interventions possibles</span></div>
+            <div><b>01</b><span>Votre aventure commence</span></div>
+          </div>
         </div>
 
-        <div className="stats">
-          <Stat icon="🚨" value="1" label="Alerte active" danger />
-          <Stat icon="🚒" value="8" label="Engins disponibles" />
-          <Stat icon="👨‍🚒" value="24" label="Effectifs disponibles" />
-          <Stat icon="📍" value="0" label="Interventions terminées" />
+        <div className="commandVisual" aria-label="Aperçu du centre opérationnel">
+          <div className="visualTop">
+            <div className="visualBrand"><span className="pulse"></span> CTA 18</div>
+            <span>EN DIRECT</span>
+          </div>
+
+          <div className="mapSurface">
+            <div className="mapLines l1"></div>
+            <div className="mapLines l2"></div>
+            <div className="mapLines l3"></div>
+            <div className="mapBlock b1"></div>
+            <div className="mapBlock b2"></div>
+            <div className="mapBlock b3"></div>
+            <div className="pin pinBlue">⌂</div>
+            <div className="pin pinRed">!</div>
+            <div className="mapLabel">SECTEUR 18 · NORD</div>
+          </div>
+
+          <div className="incidentCard">
+            <div className="incidentHeader">
+              <span className="warningIcon">!</span>
+              <div><small>ALERTE PRIORITAIRE</small><strong>Intervention en cours</strong></div>
+              <span className="time">00:42</span>
+            </div>
+            <div className="incidentRow"><span>⌖</span> Secteur Nord · D18</div>
+            <div className="units"><span>VSAV 01</span><span>FPT 01</span><span>+2</span></div>
+          </div>
         </div>
 
-        <div className="grid">
-          <section className="panel alertPanel">
-            <div className="panelHeader">
-              <div>
-                <p className="eyebrow red">🚨 ALERTE PRIORITAIRE</p>
-                <h3>Accident de la circulation</h3>
-              </div>
-              <span className="urgent">URGENT</span>
-            </div>
+        <div className="scrollHint"><span></span> DÉCOUVRIR</div>
+      </section>
 
-            <div className="alertInfo">
-              <div><span>📍</span><div><small>LOCALISATION</small><strong>D18 — Secteur Nord</strong></div></div>
-              <div><span>👥</span><div><small>SITUATION</small><strong>2 victimes signalées</strong></div></div>
-              <div><span>⏱️</span><div><small>STATUT</small><strong>{mission}</strong></div></div>
-            </div>
+      <section className="introSection" id="jeu">
+        <div className="sectionLabel">01 — L'EXPÉRIENCE</div>
+        <div className="introHeading">
+          <h2>Plus qu'un jeu.<br /><span>Une responsabilité.</span></h2>
+          <p>Chaque appel peut changer le cours d'une intervention. Dans CTA 18, vos choix, vos moyens et votre réactivité façonnent votre centre opérationnel.</p>
+        </div>
 
-            <div className="recommendation">
-              <span>💡</span>
-              <div><strong>Moyens recommandés</strong><p>VSAV + VSR • Renfort incendie selon bilan</p></div>
-            </div>
-
-            <h4>Sélectionner les moyens</h4>
-            <div className="vehicleList">
-              {vehicles.map((vehicle) => {
-                const active = selected.includes(vehicle.name);
-                return (
-                  <button
-                    key={vehicle.name}
-                    className={'vehicle ' + (active ? 'selected' : '')}
-                    onClick={() => toggleVehicle(vehicle.name)}
-                  >
-                    <span className="vehicleIcon">{vehicle.icon}</span>
-                    <span><strong>{vehicle.name}</strong><small>{vehicle.type}</small></span>
-                    <span className={mission === 'Moyens engagés' && active ? 'status engaged' : 'status'}>{mission === 'Moyens engagés' && active ? 'En route' : vehicle.status}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            <button className="engage" onClick={engage}>
-              🚨 {mission === 'Moyens engagés' ? 'MOYENS EN ROUTE' : 'ENGAGER LES MOYENS'}
-            </button>
-          </section>
-
-          <aside className="panel mapPanel">
-            <div className="panelHeader">
-              <div><p className="eyebrow">ZONE OPÉRATIONNELLE</p><h3>Carte des interventions</h3></div>
-            </div>
-            <div className="fakeMap">
-              <div className="road r1" /><div className="road r2" /><div className="road r3" />
-              <div className="mapPin fire">🚒<span>CTA 18</span></div>
-              <div className="mapPin incident">🚨<span>AVP D18</span></div>
-              <div className="mapLegend"><span><i className="green" /> Disponible</span><span><i className="redDot" /> Intervention</span></div>
-            </div>
-            <div className="mapFooter">
-              <strong>📍 Secteur Nord</strong>
-              <span>1 intervention active</span>
-            </div>
-          </aside>
+        <div className="featureCards" id="univers">
+          <article className="featureCard featured">
+            <span className="cardNumber">01</span>
+            <div className="cardSymbol">◉</div>
+            <h3>Recevez l'alerte</h3>
+            <p>Analysez chaque situation et obtenez les premières informations essentielles.</p>
+          </article>
+          <article className="featureCard">
+            <span className="cardNumber">02</span>
+            <div className="cardSymbol">↗</div>
+            <h3>Décidez des moyens</h3>
+            <p>Choisissez les véhicules et les équipes les plus adaptés à la mission.</p>
+          </article>
+          <article className="featureCard">
+            <span className="cardNumber">03</span>
+            <div className="cardSymbol">✦</div>
+            <h3>Construisez votre histoire</h3>
+            <p>Développez votre centre et progressez dans un univers opérationnel vivant.</p>
+          </article>
         </div>
       </section>
+
+      <section className="finalSection">
+        <div className="finalPanel">
+          <div className="finalBadge">CTA 18</div>
+          <h2>Le prochain appel<br />peut arriver <em>maintenant.</em></h2>
+          <a href="#accueil" className="mainCta">Prendre le commandement <span>→</span></a>
+        </div>
+      </section>
+
+      <footer>
+        <div className="logo footerLogo"><span className="logoMark"><span></span><span></span><span></span></span><span>CTA <b>18</b></span></div>
+        <span>© 2026 CTA 18 — Projet de simulation.</span>
+      </footer>
     </main>
   );
-}
-
-function Stat({ icon, value, label, danger }) {
-  return <div className={'stat ' + (danger ? 'dangerStat' : '')}><span>{icon}</span><div><strong>{value}</strong><small>{label}</small></div></div>;
 }
