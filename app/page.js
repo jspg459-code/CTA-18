@@ -1,133 +1,68 @@
 'use client';
 
-import { useState } from 'react';
-
 export default function Home() {
-  const [menuOpen, setMenuOpen] = useState(false);
-
   return (
-    <main>
-      <header className="nav">
-        <a className="logo" href="#accueil" aria-label="CTA 18">
-          <span className="logoMark"><span></span><span></span><span></span></span>
-          <span>CTA <b>18</b></span>
-        </a>
-
-        <nav className={menuOpen ? 'navLinks open' : 'navLinks'}>
-          <a href="#jeu" onClick={() => setMenuOpen(false)}>Le jeu</a>
-          <a href="#univers" onClick={() => setMenuOpen(false)}>L'univers</a>
-          <a href="#commencer" onClick={() => setMenuOpen(false)}>Commencer</a>
-        </nav>
-
-        <div className="navActions">
-          <button className="login">Connexion</button>
-          <a className="navPlay" href="#commencer">Jouer maintenant</a>
-          <button className="menuButton" onClick={() => setMenuOpen(!menuOpen)} aria-label="Menu">
-            <i></i><i></i>
-          </button>
+    <main className="site">
+      <header className="top">
+        <div className="wrap navWrap">
+          <a className="brand" href="#home"><span className="shield">18</span><span>CTA <b>18</b></span></a>
+          <nav>
+            <a className="active" href="#home">Accueil</a>
+            <a href="#game">Le jeu</a>
+            <a href="#news">Actualités</a>
+            <a href="#ranking">Classement</a>
+            <a href="#community">Communauté</a>
+          </nav>
+          <div className="account"><button>Connexion</button><a className="signup" href="#game">Inscription</a></div>
         </div>
       </header>
 
-      <section className="heroNew" id="accueil">
-        <div className="heroGlow"></div>
-        <div className="heroGrid"></div>
-
-        <div className="heroCopy">
-          <div className="liveBadge"><span></span> SIMULATION OPÉRATIONNELLE</div>
-          <h1>Quand l'alerte retentit,<br /><em>vous décidez.</em></h1>
-          <p>
-            Prenez place au cœur du centre opérationnel. Analysez les appels,
-            engagez les secours et construisez votre propre histoire.
-          </p>
-
-          <div className="heroButtons" id="commencer">
-            <a className="mainCta" href="#jeu">
-              <span className="ctaIcon">▶</span>
-              Commencer l'aventure
-            </a>
-            <a className="ghostCta" href="#jeu">Découvrir CTA 18 <span>↘</span></a>
-          </div>
-
-          <div className="heroMeta">
-            <div><b>24/7</b><span>Centre opérationnel</span></div>
-            <div><b>∞</b><span>Interventions possibles</span></div>
-            <div><b>01</b><span>Votre aventure commence</span></div>
-          </div>
-        </div>
-
-        <div className="commandVisual" aria-label="Aperçu du centre opérationnel">
-          <div className="visualTop">
-            <div className="visualBrand"><span className="pulse"></span> CTA 18</div>
-            <span>EN DIRECT</span>
-          </div>
-
-          <div className="mapSurface">
-            <div className="mapLines l1"></div>
-            <div className="mapLines l2"></div>
-            <div className="mapLines l3"></div>
-            <div className="mapBlock b1"></div>
-            <div className="mapBlock b2"></div>
-            <div className="mapBlock b3"></div>
-            <div className="pin pinBlue">⌂</div>
-            <div className="pin pinRed">!</div>
-            <div className="mapLabel">SECTEUR 18 · NORD</div>
-          </div>
-
-          <div className="incidentCard">
-            <div className="incidentHeader">
-              <span className="warningIcon">!</span>
-              <div><small>ALERTE PRIORITAIRE</small><strong>Intervention en cours</strong></div>
-              <span className="time">00:42</span>
+      <section className="welcome" id="home">
+        <div className="wrap">
+          <div className="crumb">ACCUEIL <span>/</span> BIENVENUE SUR CTA 18</div>
+          <div className="welcomeGrid">
+            <div>
+              <span className="tag">JEU DE GESTION DE SECOURS</span>
+              <h1>Bienvenue sur <span>CTA 18</span></h1>
+              <p>Créez votre centre de secours, gérez vos équipes et intervenez face aux situations d'urgence.</p>
+              <div className="welcomeButtons"><a className="play" href="#game">▶ COMMENCER À JOUER</a><a className="how" href="#game">Comment jouer ?</a></div>
             </div>
-            <div className="incidentRow"><span>⌖</span> Secteur Nord · D18</div>
-            <div className="units"><span>VSAV 01</span><span>FPT 01</span><span>+2</span></div>
+            <div className="dispatchPreview">
+              <div className="dispatchHead"><strong>🚨 CENTRE DE SECOURS</strong><span>EN SERVICE</span></div>
+              <div className="dispatchBody">
+                <div className="station"><div className="stationIcon">🚒</div><div><b>CIS CTA 18</b><small>Centre opérationnel</small></div><em>●</em></div>
+                <div className="miniStats"><div><b>08</b><span>ENGINS</span></div><div><b>24</b><span>EFFECTIFS</span></div><div><b>00</b><span>ALERTES</span></div></div>
+              </div>
+              <div className="dispatchFoot">PRÊT POUR LA PROCHAINE ALERTE</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="content wrap" id="game">
+        <div className="mainColumn">
+          <div className="sectionTitle"><div><h2>Actualités</h2><p>Les dernières informations de CTA 18</p></div><a href="#news">VOIR TOUTES LES ACTUALITÉS →</a></div>
+          <div className="newsGrid" id="news">
+            <article className="news featuredNews"><div className="newsImage"><span>🚒</span></div><div className="newsText"><small>MISE À JOUR</small><h3>CTA 18 ouvre bientôt ses portes</h3><p>Découvrez un nouveau jeu de gestion dédié à l'univers des secours et des interventions.</p><span className="date">Aujourd'hui</span></div></article>
+            <article className="news"><div className="newsText"><small>COMMUNAUTÉ</small><h3>Construisez votre futur centre de secours</h3><p>Développez votre caserne, vos équipes et votre flotte.</p><span className="date">À venir</span></div></article>
+          </div>
+
+          <div className="sectionTitle gameTitle"><div><h2>Votre aventure commence ici</h2><p>Les grandes étapes de votre progression</p></div></div>
+          <div className="steps">
+            <div className="step"><span>1</span><div className="stepIcon">🏢</div><h3>Créez votre centre</h3><p>Choisissez votre départ et construisez votre organisation.</p></div>
+            <div className="step"><span>2</span><div className="stepIcon">👨‍🚒</div><h3>Formez vos équipes</h3><p>Recrutez et préparez vos sapeurs-pompiers.</p></div>
+            <div className="step"><span>3</span><div className="stepIcon">🚨</div><h3>Partez en intervention</h3><p>Répondez aux alertes et engagez les moyens.</p></div>
           </div>
         </div>
 
-        <div className="scrollHint"><span></span> DÉCOUVRIR</div>
+        <aside className="sidebar">
+          <div className="sideCard loginCard"><h3>Déjà membre ?</h3><p>Connectez-vous pour retrouver votre centre.</p><button>SE CONNECTER</button></div>
+          <div className="sideCard" id="ranking"><div className="sideHead"><h3>🏆 Classement</h3><a href="#ranking">Voir +</a></div><ol><li><span>1</span><b>CIS Alpha</b><em>12 450 XP</em></li><li><span>2</span><b>Secours Nord</b><em>10 820 XP</em></li><li><span>3</span><b>CTA Rhône</b><em>9 670 XP</em></li></ol></div>
+          <div className="sideCard community" id="community"><h3>💬 Communauté</h3><p>Rejoignez les futurs joueurs de CTA 18.</p><a href="#community">EN SAVOIR PLUS →</a></div>
+        </aside>
       </section>
 
-      <section className="introSection" id="jeu">
-        <div className="sectionLabel">01 — L'EXPÉRIENCE</div>
-        <div className="introHeading">
-          <h2>Plus qu'un jeu.<br /><span>Une responsabilité.</span></h2>
-          <p>Chaque appel peut changer le cours d'une intervention. Dans CTA 18, vos choix, vos moyens et votre réactivité façonnent votre centre opérationnel.</p>
-        </div>
-
-        <div className="featureCards" id="univers">
-          <article className="featureCard featured">
-            <span className="cardNumber">01</span>
-            <div className="cardSymbol">◉</div>
-            <h3>Recevez l'alerte</h3>
-            <p>Analysez chaque situation et obtenez les premières informations essentielles.</p>
-          </article>
-          <article className="featureCard">
-            <span className="cardNumber">02</span>
-            <div className="cardSymbol">↗</div>
-            <h3>Décidez des moyens</h3>
-            <p>Choisissez les véhicules et les équipes les plus adaptés à la mission.</p>
-          </article>
-          <article className="featureCard">
-            <span className="cardNumber">03</span>
-            <div className="cardSymbol">✦</div>
-            <h3>Construisez votre histoire</h3>
-            <p>Développez votre centre et progressez dans un univers opérationnel vivant.</p>
-          </article>
-        </div>
-      </section>
-
-      <section className="finalSection">
-        <div className="finalPanel">
-          <div className="finalBadge">CTA 18</div>
-          <h2>Le prochain appel<br />peut arriver <em>maintenant.</em></h2>
-          <a href="#accueil" className="mainCta">Prendre le commandement <span>→</span></a>
-        </div>
-      </section>
-
-      <footer>
-        <div className="logo footerLogo"><span className="logoMark"><span></span><span></span><span></span></span><span>CTA <b>18</b></span></div>
-        <span>© 2026 CTA 18 — Projet de simulation.</span>
-      </footer>
+      <footer><div className="wrap footerWrap"><span>© 2026 CTA 18</span><span>Jeu de gestion et de simulation</span></div></footer>
     </main>
   );
 }
