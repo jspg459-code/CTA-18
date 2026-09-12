@@ -5,7 +5,7 @@ import { useMemo, useState } from 'react';
 const SUPABASE_URL = 'https://zypntdqemnehqgogwntu.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_OQ2mszgzlwfBRMVPCi33zw_jOT-hadJ';
 
-const departmentRows = \`
+const departmentRows = `
 01|Ain
 02|Aisne
 03|Allier
@@ -107,7 +107,7 @@ const departmentRows = \`
 973|Guyane
 974|La Réunion
 976|Mayotte
-\`.trim();
+`.trim();
 
 const departments = departmentRows.split('\\n').map((row) => {
   const [code, name] = row.split('|');
