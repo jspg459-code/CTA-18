@@ -356,24 +356,45 @@ export default function Home() {
   };
   const dispatchVehicle = (station, type) => {
     if (!activeCall) return;
+    const originLat = Number(station.lat);
+    const originLon = Number(station.lon);
+    const targetLat = Number(activeCall.lat);
+    const targetLon = Number(activeCall.lon);
     const item={
       id:Date.now()+'-'+type,
       stationId:station.id,
       stationName:station.name,
       type,
       status:'EN ROUTE',
-      // Coordonnées numériques obligatoires pour l'affichage du moyen sur Leaflet.
-      lat:Number(station.lat),
-      lon:Number(station.lon)
+      // Position de départ + destination : la carte anime réellement le déplacement.
+      originLat,
+      originLon,
+      targetLat,
+      targetLon,
+      lat:originLat,
+      lon:originLon,
+      startedAt:Date.now(),
+      travelDuration:18000
     };
-    if (!Number.isFinite(item.lat) || !Number.isFinite(item.lon)) return;
+    if (![originLat,originLon,targetLat,targetLon].every(Number.isFinite)) return;
     setDispatchVehicles(list=>[...list,item]);
     setActiveCall(call=>({...call,status:'MOYENS ENGAGÉS'}));
     // Après engagement, retour immédiat à la cartographie pour suivre les moyens.
     setCtaView('map');
   };
   const sendVsavToHospital = (vehicle) => {
-    setDispatchVehicles(list=>list.map(v=>v.id===vehicle.id?{...v,status:'TRANSPORT HÔPITAL'}:v));
+    // Le choix de l'hôpital sera relié au plus proche établissement réel chargé par la cartographie.
+    // En attendant la sélection opérateur, le VSAV reste clairement identifié en transport.
+    setDispatchVehicles(list=>list.map(v=>v.id===vehicle.id?{
+      ...v,
+      status:'TRANSPORT HÔPITAL',
+      originLat:Number(activeCall?.lat ?? v.targetLat ?? v.lat),
+      originLon:Number(activeCall?.lon ?? v.targetLon ?? v.lon),
+      lat:Number(activeCall?.lat ?? v.targetLat ?? v.lat),
+      lon:Number(activeCall?.lon ?? v.targetLon ?? v.lon),
+      startedAt:Date.now(),
+      travelDuration:18000
+    }:v));
     setTransportStatus({vehicleId:vehicle.id,vehicleName:vehicle.type+' '+vehicle.stationName,lat:activeCall?.lat,lon:activeCall?.lon});
   };
   const returnVsavToCis = (vehicle) => {
