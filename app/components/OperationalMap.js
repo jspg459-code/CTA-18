@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 
@@ -10,6 +10,14 @@ const stationIcon = L.divIcon({
   iconSize: [26, 26],
   iconAnchor: [13, 13],
   popupAnchor: [0, -14],
+});
+
+const hospitalIcon = L.divIcon({
+  className: 'hospitalMarkerWrap',
+  html: '<div class="hospitalMarker">🏥</div>',
+  iconSize: [15, 15],
+  iconAnchor: [7, 7],
+  popupAnchor: [0, -9],
 });
 
 function FitToStations({ stations, fallback }) {
@@ -30,6 +38,21 @@ function FitToStations({ stations, fallback }) {
   }, [stations, fallback, map]);
 
   return null;
+}
+
+function AllHospitals({ hospitals }) {
+  return (
+    <>
+      {hospitals.map((hospital) => (
+        <Marker key={hospital.id} position={[hospital.lat, hospital.lon]} icon={hospitalIcon}>
+          <Popup>
+            <strong>🏥 {hospital.name}</strong><br />
+            {hospital.address || 'Établissement hospitalier'}
+          </Popup>
+        </Marker>
+      ))}
+    </>
+  );
 }
 
 function AllStations({ stations, onStationSelect }) {
@@ -54,6 +77,41 @@ function AllStations({ stations, onStationSelect }) {
 
 export default function OperationalMap({ stations, fallback, onStationSelect }) {
   const center = useMemo(() => [fallback.lat, fallback.lon], [fallback]);
+  const [hospitals, setHospitals] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const radius = fallback.zoom && fallback.zoom <= 8 ? 35000 : 18000;
+    const query = `[out:json][timeout:20];(nwr["amenity"="hospital"](around:${radius},${fallback.lat},${fallback.lon});nwr["healthcare"="hospital"](around:${radius},${fallback.lat},${fallback.lon}););out center tags;`;
+
+    fetch('https://overpass-api.de/api/interpreter', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+      body: query,
+    })
+      .then((response) => response.ok ? response.json() : Promise.reject(new Error('hospital source unavailable')))
+      .then((data) => {
+        if (cancelled) return;
+        const unique = new Map();
+        (data.elements || []).forEach((item) => {
+          const lat = item.lat ?? item.center?.lat;
+          const lon = item.lon ?? item.center?.lon;
+          if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+          const name = item.tags?.name || 'Hôpital';
+          unique.set(item.type + '-' + item.id, {
+            id: item.type + '-' + item.id,
+            lat,
+            lon,
+            name,
+            address: [item.tags?.['addr:housenumber'], item.tags?.['addr:street'], item.tags?.['addr:postcode'], item.tags?.['addr:city']].filter(Boolean).join(' ') || item.tags?.['addr:full'] || '',
+          });
+        });
+        setHospitals([...unique.values()]);
+      })
+      .catch(() => { if (!cancelled) setHospitals([]); });
+
+    return () => { cancelled = true; };
+  }, [fallback.lat, fallback.lon, fallback.zoom]);
 
   return (
     <div className="operationalMap">
@@ -71,6 +129,7 @@ export default function OperationalMap({ stations, fallback, onStationSelect }) 
 
         <FitToStations stations={stations} fallback={fallback} />
         <AllStations stations={stations} onStationSelect={onStationSelect} />
+        <AllHospitals hospitals={hospitals} />
       </MapContainer>
     </div>
   );
