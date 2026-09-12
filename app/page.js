@@ -157,7 +157,7 @@ export default function Home() {
   const [selectedService, setSelectedService] = useState(null);
   const [search, setSearch] = useState('');
   const [stations, setStations] = useState([]);
-  const [stationsLoading, setStationsLoading] = useState(false);
+  const [stationsLoading, setStationsLoading] = useState(false);\n  const [stationsError, setStationsError] = useState('');
   const [selectedStation, setSelectedStation] = useState(null);
   const [ctaView, setCtaView] = useState('map');
 
@@ -209,51 +209,69 @@ export default function Home() {
   useEffect(() => {
     if (!selectedService) return;
     let cancelled = false;
-    const cacheKey = 'cta18-stations-v2-' + selectedService.code;
+    const cacheKey = 'cta18-stations-v4-' + selectedService.code;
 
     const readCache = () => {
       try {
         const raw = window.localStorage.getItem(cacheKey);
         if (!raw) return null;
         const cached = JSON.parse(raw);
-        if (!Array.isArray(cached?.stations)) return null;
-        return cached.stations;
+        return Array.isArray(cached?.stations) && cached.stations.length ? cached.stations : null;
       } catch {
         return null;
       }
     };
 
     const cachedStations = readCache();
-    if (cachedStations?.length) {
-      setStations(cachedStations);
-      setStationsLoading(false);
-    } else {
-      setStations([]);
-      setStationsLoading(true);
-    }
+    setStations(cachedStations || []);
+    setStationsLoading(!cachedStations?.length);
+    setStationsError('');
 
     const loadStations = async () => {
-      try {
-        const response = await fetch('/api/stations?code=' + encodeURIComponent(selectedService.code), {
-          cache: 'force-cache',
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data?.error || 'Impossible de charger les centres.');
-        const nextStations = Array.isArray(data.stations) ? data.stations : [];
-        if (!cancelled) {
-          setStations(nextStations);
-          try {
-            window.localStorage.setItem(cacheKey, JSON.stringify({ stations: nextStations, savedAt: Date.now() }));
-          } catch {}
+      let lastError = '';
+
+      // Une réponse 503 ne doit jamais rester bloquée dans le cache du navigateur.
+      // On réessaie automatiquement avec une URL unique et sans cache.
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          const separator = attempt === 0 ? '&' : '&';
+          const response = await fetch(
+            '/api/stations?code=' + encodeURIComponent(selectedService.code) +
+            separator + '_=' + Date.now() + '-' + attempt,
+            { cache: 'no-store', headers: { 'Cache-Control': 'no-cache' } }
+          );
+
+          const data = await response.json();
+          if (!response.ok) throw new Error(data?.error || 'Le serveur des centres est temporairement indisponible.');
+
+          const nextStations = Array.isArray(data.stations) ? data.stations : [];
+          if (!nextStations.length) throw new Error('Aucun centre retourné pour ce territoire.');
+
+          if (!cancelled) {
+            setStations(nextStations);
+            setStationsError('');
+            try {
+              window.localStorage.setItem(cacheKey, JSON.stringify({ stations: nextStations, savedAt: Date.now() }));
+            } catch {}
+          }
+          return;
+        } catch (error) {
+          lastError = error?.message || 'Impossible de charger les centres.';
+          if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 700 * (attempt + 1)));
         }
-      } catch {
-        if (!cancelled && !cachedStations?.length) setStations([]);
-      } finally {
-        if (!cancelled) setStationsLoading(false);
+      }
+
+      if (!cancelled) {
+        // On conserve les données déjà connues plutôt que d'effacer brutalement le CTA.
+        if (!cachedStations?.length) setStations([]);
+        setStationsError(lastError || 'Impossible de charger les centres pour le moment.');
       }
     };
 
-    loadStations();
+    loadStations().finally(() => {
+      if (!cancelled) setStationsLoading(false);
+    });
+
     return () => { cancelled = true; };
   }, [selectedService]);
 
