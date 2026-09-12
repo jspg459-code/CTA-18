@@ -410,11 +410,11 @@ const operatorConsole = selectedService ? <div className="operatorConsoleInline"
                   <button className={ctaView === 'activeInterventions' ? 'active' : ''} type="button" onClick={() => setCtaView('activeInterventions')}>Interventions en cours <span className="menuCounter">0</span></button>
                   <button className={ctaView === 'reinforcements' ? 'active' : ''} type="button" onClick={() => setCtaView('reinforcements')}>Demande de renfort <span className="menuCounter">0</span></button>
                 </div>
-              </div>
-
-              {ctaView !== 'console' && <div className="commandMapTitle">
-                <div><span className="authTag">CENTRE OPÉRATIONNEL</span><h1>{selectedService.name}</h1><p>Carte opérationnelle • {operationalStations.length} CIS référencés • positions réelles</p></div>
-                <div className="territoryLive"><i className="legendDot green"></i> TERRITOIRE EN LIGNE</div>
+                <div className="selectedSdisBadge">
+                  <span className="selectedSdisLabel">SDIS SÉLECTIONNÉ</span>
+                  <strong>{selectedService.name}</strong>
+                  <span className="selectedSdisMeta"><i className="legendDot green"></i>{operationalStations.length} CIS • En ligne</span>
+                </div>
               </div>}
 
               <div className="commandMapArea">
