@@ -189,3 +189,25 @@ footer{background:#171c23;color:#a8b0b8}.footerWrap{padding:28px 0;display:flex;
   .synopticMetricGrid b{font-size:1.6rem;}
   .synopticFleetList{grid-template-columns:1fr;}
 }
+
+
+/* Compact CIS markers: every centre remains visible on the operational map */
+.cisMarkerWrap{
+  background:transparent!important;
+  border:0!important;
+}
+.cisMarker{
+  width:26px;
+  height:26px;
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+  background:#e63832;
+  border:2px solid #fff;
+  box-shadow:0 2px 7px rgba(28,35,42,.35);
+  font-size:14px;
+  line-height:1;
+}
+@media(max-width:600px){
+  .cisMarker{width:22px;height:22px;font-size:12px;border-width:2px;}
+}
