@@ -40,6 +40,14 @@ function FitToStations({ stations, fallback }) {
   return null;
 }
 
+const vsavTransportIcon = L.divIcon({
+  className: 'vsavTransportMarkerWrap',
+  html: '<div class="vsavTransportMarker">🚑</div>',
+  iconSize: [22, 22],
+  iconAnchor: [11, 11],
+  popupAnchor: [0, -12],
+});
+
 function AllHospitals({ hospitals }) {
   return (
     <>
@@ -75,7 +83,21 @@ function AllStations({ stations, onStationSelect }) {
   );
 }
 
-export default function OperationalMap({ stations, fallback, onStationSelect }) {
+function VsavTransports({ transports, hospitals }) {
+  return (
+    <>
+      {transports.map((transport) => {
+        const hospital = hospitals.find(h => h.id === transport.hospitalId);
+        if (!hospital) return null;
+        return <Marker key={transport.id} position={[transport.lat, transport.lon]} icon={vsavTransportIcon}>
+          <Popup><strong>🚑 {transport.vehicleName}</strong><br />🏥 Transporte une victime vers : <b>{hospital.name}</b><br /><small>Statut : transport hospitalier</small></Popup>
+        </Marker>;
+      })}
+    </>
+  );
+}
+
+export default function OperationalMap({ stations, fallback, onStationSelect, transports = [] }) {
   const center = useMemo(() => [fallback.lat, fallback.lon], [fallback]);
   const [hospitals, setHospitals] = useState([]);
 
@@ -130,6 +152,7 @@ export default function OperationalMap({ stations, fallback, onStationSelect }) 
         <FitToStations stations={stations} fallback={fallback} />
         <AllStations stations={stations} onStationSelect={onStationSelect} />
         <AllHospitals hospitals={hospitals} />
+        <VsavTransports transports={transports} hospitals={hospitals} />
       </MapContainer>
     </div>
   );
