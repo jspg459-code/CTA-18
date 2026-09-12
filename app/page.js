@@ -157,7 +157,8 @@ export default function Home() {
   const [selectedService, setSelectedService] = useState(null);
   const [search, setSearch] = useState('');
   const [stations, setStations] = useState([]);
-  const [stationsLoading, setStationsLoading] = useState(false);\n  const [stationsError, setStationsError] = useState('');
+  const [stationsLoading, setStationsLoading] = useState(false);
+  const [stationsError, setStationsError] = useState('');
   const [selectedStation, setSelectedStation] = useState(null);
   const [ctaView, setCtaView] = useState('map');
 
