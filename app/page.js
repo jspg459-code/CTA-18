@@ -74,13 +74,6 @@ export default function Home() {
       const departure = [50.279, 3.973];
       const incident = [50.258, 3.944];
 
-      const route = L.polyline([departure, incident], {
-        color: '#e23432',
-        weight: 5,
-        opacity: 0.9,
-        dashArray: '8 10',
-      }).addTo(map);
-
       L.marker(incident, { icon: icon('🔥', 'incident') })
         .addTo(map)
         .bindPopup('<b>Intervention en cours</b><br/>Feu d\'habitation');
@@ -89,16 +82,74 @@ export default function Home() {
         .addTo(map)
         .bindPopup('<b>FPT Maubeuge</b><br/>En intervention');
 
-      let progress = 0;
-      timer = setInterval(() => {
-        progress += 0.004;
-        if (progress > 1) progress = 0;
-        const lat = departure[0] + (incident[0] - departure[0]) * progress;
-        const lng = departure[1] + (incident[1] - departure[1]) * progress;
-        vehicle.setLatLng([lat, lng]);
-      }, 60);
+      // Calcul d'un véritable itinéraire routier : le camion suit les rues.
+      const fallbackRoute = [departure, incident];
+      let routeLine = L.polyline(fallbackRoute, {
+        color: '#e23432',
+        weight: 5,
+        opacity: 0.9,
+        dashArray: '8 10',
+      }).addTo(map);
 
-      map.fitBounds(route.getBounds().pad(1.8));
+      const animateVehicle = (routePoints) => {
+        if (!routePoints || routePoints.length < 2) return;
+
+        let segment = 0;
+        let segmentProgress = 0;
+
+        if (timer) clearInterval(timer);
+        timer = setInterval(() => {
+          const from = routePoints[segment];
+          const to = routePoints[(segment + 1) % routePoints.length];
+
+          segmentProgress += 0.025;
+          if (segmentProgress >= 1) {
+            segmentProgress = 0;
+            segment += 1;
+            if (segment >= routePoints.length - 1) {
+              segment = 0;
+            }
+          }
+
+          const lat = from[0] + (to[0] - from[0]) * segmentProgress;
+          const lng = from[1] + (to[1] - from[1]) * segmentProgress;
+          vehicle.setLatLng([lat, lng]);
+        }, 60);
+      };
+
+      // OSRM renvoie la géométrie réelle des routes OpenStreetMap.
+      fetch(
+        'https://router.project-osrm.org/route/v1/driving/' +
+          departure[1] + ',' + departure[0] + ';' +
+          incident[1] + ',' + incident[0] +
+          '?overview=full&geometries=geojson'
+      )
+        .then((response) => {
+          if (!response.ok) throw new Error('Routing unavailable');
+          return response.json();
+        })
+        .then((data) => {
+          const coordinates = data?.routes?.[0]?.geometry?.coordinates;
+          if (!coordinates?.length) throw new Error('No route');
+
+          const roadRoute = coordinates.map(([lng, lat]) => [lat, lng]);
+          map.removeLayer(routeLine);
+          routeLine = L.polyline(roadRoute, {
+            color: '#e23432',
+            weight: 5,
+            opacity: 0.9,
+            dashArray: '8 10',
+          }).addTo(map);
+
+          animateVehicle(roadRoute);
+          map.fitBounds(routeLine.getBounds().pad(0.35));
+        })
+        .catch(() => {
+          // Secours visuel si le service de calcul est momentanément indisponible.
+          animateVehicle(fallbackRoute);
+          map.fitBounds(routeLine.getBounds().pad(1.8));
+        });
+
       setTimeout(() => map.invalidateSize(), 300);
     });
 
