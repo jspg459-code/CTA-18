@@ -323,11 +323,6 @@ export default function Home() {
                     fallback={{ lat: 46.603354, lon: 1.888334, zoom: 6 }}
                     onStationSelect={setSelectedStation}
                   />
-                  <aside className="incomingCallOverlay">
-                    <div className="callOverlayHead"><span className="phonePulse">📱</span><div><b>Appels vers 18/112</b><small>Réception opérationnelle</small></div></div>
-                    <div className="callOverlayEmpty"><strong>0</strong><span>appel en attente</span></div>
-                    <div className="callOverlayActions"><button className="takeCall" type="button">Prendre l'appel</button><button type="button">Refuser l'appel</button></div>
-                  </aside>
                   <div className="mapLegendOperational">
                     <div><i className="legendDot green"></i> CIS disponible</div>
                     <div><i className="legendDot red"></i> CIS engagé</div>
