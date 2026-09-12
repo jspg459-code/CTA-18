@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 
 const icon = (className, emoji, size) => L.divIcon({
@@ -19,12 +19,7 @@ const engagedVehicleIcon = icon('engagedVehicleMarkerWrap', '🚒', [24,24]);
 const transportIcon = icon('vsavTransportMarkerWrap', '🚑', [24,24]);
 
 const validPoint = (lat, lon) => Number.isFinite(Number(lat)) && Number.isFinite(Number(lon));
-
-const pointDistance = (a, b) => {
-  const x = (b[1] - a[1]) * Math.cos(((a[0] + b[0]) / 2) * Math.PI / 180);
-  const y = b[0] - a[0];
-  return Math.sqrt(x * x + y * y);
-};
+const lerp = (a, b, t) => Number(a) + (Number(b) - Number(a)) * t;
 
 function FitToOperationalPoints({ stations, hospitals, fallback, activeIntervention, vehicles }) {
   const map = useMap();
@@ -42,105 +37,36 @@ function FitToOperationalPoints({ stations, hospitals, fallback, activeIntervent
   return null;
 }
 
-function RoutedVehicle({ vehicle, activeIntervention, now }) {
-  const fromLat = Number(vehicle.originLat ?? vehicle.lat);
-  const fromLon = Number(vehicle.originLon ?? vehicle.lon);
-  const toLat = Number(vehicle.targetLat ?? activeIntervention?.lat ?? vehicle.lat);
-  const toLon = Number(vehicle.targetLon ?? activeIntervention?.lon ?? vehicle.lon);
-  const [route, setRoute] = useState(null);
-
+function MovingVehicles({ vehicles = [], activeIntervention }) {
+  const [now, setNow] = useState(Date.now());
   useEffect(() => {
-    let cancelled = false;
-    if (!validPoint(fromLat, fromLon) || !validPoint(toLat, toLon)) {
-      setRoute(null);
-      return;
-    }
+    const timer = setInterval(() => setNow(Date.now()), 400);
+    return () => clearInterval(timer);
+  }, []);
 
-    const controller = new AbortController();
-    const url = 'https://router.project-osrm.org/route/v1/driving/' +
-      encodeURIComponent(fromLon + ',' + fromLat + ';' + toLon + ',' + toLat) +
-      '?overview=full&geometries=geojson';
+  return vehicles.map(vehicle => {
+    const fromLat = Number(vehicle.originLat ?? vehicle.lat);
+    const fromLon = Number(vehicle.originLon ?? vehicle.lon);
+    const toLat = Number(vehicle.targetLat ?? activeIntervention?.lat ?? vehicle.lat);
+    const toLon = Number(vehicle.targetLon ?? activeIntervention?.lon ?? vehicle.lon);
+    if (!validPoint(fromLat, fromLon) || !validPoint(toLat, toLon)) return null;
 
-    fetch(url, { signal: controller.signal })
-      .then(r => r.ok ? r.json() : Promise.reject(new Error('route unavailable')))
-      .then(data => {
-        const coordinates = data?.routes?.[0]?.geometry?.coordinates;
-        if (!Array.isArray(coordinates) || coordinates.length < 2) throw new Error('invalid route');
-        const nextRoute = coordinates
-          .map(([lon, lat]) => [Number(lat), Number(lon)])
-          .filter(([lat, lon]) => validPoint(lat, lon));
-        if (!cancelled && nextRoute.length >= 2) setRoute(nextRoute);
-      })
-      .catch(() => {
-        if (!cancelled) setRoute([[fromLat, fromLon], [toLat, toLon]]);
-      });
+    const duration = Number(vehicle.travelDuration || 18000);
+    const progress = vehicle.status === 'ARRIVÉ SUR PLACE' ? 1 : Math.min(1, Math.max(0, (now - Number(vehicle.startedAt || now)) / duration));
+    const lat = progress >= 1 ? toLat : lerp(fromLat, toLat, progress);
+    const lon = progress >= 1 ? toLon : lerp(fromLon, toLon, progress);
+    const isTransport = vehicle.status === 'TRANSPORT HÔPITAL';
 
-    return () => {
-      cancelled = true;
-      controller.abort();
-    };
-  }, [fromLat, fromLon, toLat, toLon]);
-
-  const path = route && route.length >= 2 ? route : [[fromLat, fromLon], [toLat, toLon]];
-  const duration = Number(vehicle.travelDuration || 18000);
-  const progress = vehicle.status === 'ARRIVÉ SUR PLACE'
-    ? 1
-    : Math.min(1, Math.max(0, (now - Number(vehicle.startedAt || now)) / duration));
-
-  let position = path[0];
-  if (progress >= 1) {
-    position = path[path.length - 1];
-  } else {
-    const lengths = [];
-    let total = 0;
-    for (let i = 1; i < path.length; i++) {
-      total += pointDistance(path[i - 1], path[i]);
-      lengths.push(total);
-    }
-    const target = total * progress;
-    let previous = 0;
-    for (let i = 0; i < lengths.length; i++) {
-      if (target <= lengths[i]) {
-        const segmentLength = Math.max(lengths[i] - previous, 0.0000001);
-        const local = (target - previous) / segmentLength;
-        const a = path[i];
-        const b = path[i + 1];
-        position = [
-          a[0] + (b[0] - a[0]) * local,
-          a[1] + (b[1] - a[1]) * local,
-        ];
-        break;
-      }
-      previous = lengths[i];
-    }
-  }
-
-  const isTransport = vehicle.status === 'TRANSPORT HÔPITAL';
-
-  return (
-    <>
-      {route && route.length >= 2 && <Polyline positions={route} pathOptions={{weight:3, opacity:0.55}} />}
-      <Marker position={position} icon={isTransport ? transportIcon : engagedVehicleIcon}>
+    return (
+      <Marker key={vehicle.id} position={[lat,lon]} icon={isTransport ? transportIcon : engagedVehicleIcon}>
         <Popup>
           <strong>{isTransport ? '🚑' : '🚒'} {vehicle.type}</strong><br/>
           {vehicle.stationName}<br/>
           <small>{progress >= 1 && vehicle.status === 'EN ROUTE' ? 'ARRIVÉ SUR PLACE' : vehicle.status}</small>
         </Popup>
       </Marker>
-    </>
-  );
-}
-
-function MovingVehicles({ vehicles = [], activeIntervention }) {
-  const [now, setNow] = useState(Date.now());
-  useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 250);
-    return () => clearInterval(timer);
-  }, []);
-
-  return vehicles.map(vehicle => (
-    <RoutedVehicle key={vehicle.id} vehicle={vehicle} activeIntervention={activeIntervention} now={now} />
-  ));
+    );
+  });
 }
 
 export default function OperationalMap({ stations = [], fallback, onStationSelect, activeIntervention = null, vehicles = [] }) {
