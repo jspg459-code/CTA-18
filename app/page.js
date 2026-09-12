@@ -158,10 +158,19 @@ export default function Home() {
     finally { setAuthLoading(false); }
   };
 
+  const openCTA = (service) => {
+    setSearch('');
+    setServicePicker(false);
+    setSelectedService(service);
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  };
+
   const chooseDepartment = (department) => {
-    if (['75','92','93','94'].includes(department.code)) setSelectedService({ code: 'BSPP', name: 'Brigade de sapeurs-pompiers de Paris', area: 'Paris et petite couronne', icon: '🗼' });
-    else setSelectedService({ code: department.code, name: 'SDIS ' + department.code + ' — ' + department.name, area: department.name, icon: '🚒' });
-    setServicePicker(false); setSearch('');
+    if (['75','92','93','94'].includes(department.code)) {
+      openCTA({ code: 'BSPP', name: 'Brigade de sapeurs-pompiers de Paris', area: 'Paris et petite couronne', icon: '🗼' });
+      return;
+    }
+    openCTA({ code: department.code, name: 'SDIS ' + department.code + ' — ' + department.name, area: department.name, icon: '🚒' });
   };
 
   useEffect(() => {
@@ -213,7 +222,7 @@ export default function Home() {
         ) : (
           <section className="dashboardPage"><div className="wrap dashboardWrap">
             {!servicePicker ? <><div className="dashboardWelcome"><span className="authTag">ESPACE JOUEUR</span><h1>Bienvenue, <span>{playerName}</span> 👋</h1><p>Choisissez maintenant le territoire réel que vous allez commander.</p></div><div className="dashboardGrid"><article className="gameCard primaryGameCard"><div className="gameIcon">🇫🇷</div><span className="cardLabel">NOUVELLE PARTIE</span><h2>Choisissez votre service</h2><p>Tous les départements français sont disponibles, avec la BSPP et le BMPM.</p><button className="startGame" type="button" onClick={() => setServicePicker(true)}>CHOISIR MON SDIS →</button></article><div className="dashboardSide"><article className="miniCard"><span>🇫🇷</span><div><b>{departments.length} départements</b><p>Une sélection nationale complète.</p></div></article><article className="miniCard"><span>🗼</span><div><b>BSPP</b><p>Paris et petite couronne.</p></div></article><article className="miniCard"><span>⚓</span><div><b>BMPM</b><p>Marseille.</p></div></article></div></div></> :
-              <section className="servicePicker"><button className="backToPicker" type="button" onClick={() => { setServicePicker(false); setSearch(''); }}>← RETOUR</button><div className="pickerHead"><span className="authTag">NOUVELLE PARTIE</span><h1>Choisissez votre territoire</h1><p>Recherchez un département, un SDIS ou choisissez directement la BSPP et le BMPM.</p><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Ex. 59, Nord, SDIS 62..." /></div><div className="specialGrid">{specialServices.map((service) => <button className="specialService" key={service.code} type="button" onClick={() => { setSelectedService(service); setServicePicker(false); }}><span>{service.icon}</span><div><small>{service.code}</small><b>{service.name}</b><p>{service.area}</p></div><strong>→</strong></button>)}</div><div className="departmentHeader"><h2>🇫🇷 Tous les départements</h2><span>{filteredDepartments.length} résultats</span></div><div className="departmentGrid">{filteredDepartments.map((department) => <button key={department.code} className="departmentCard" type="button" onClick={() => chooseDepartment(department)}><span className="departmentCode">{department.code}</span><span className="departmentInfo"><b>{department.name}</b><small>{department.label}</small></span><span className="departmentArrow">→</span></button>)}</div></section>}
+              <section className="servicePicker"><button className="backToPicker" type="button" onClick={() => { setServicePicker(false); setSearch(''); }}>← RETOUR</button><div className="pickerHead"><span className="authTag">NOUVELLE PARTIE</span><h1>Choisissez votre territoire</h1><p>Recherchez un département, un SDIS ou choisissez directement la BSPP et le BMPM.</p><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Ex. 59, Nord, SDIS 62..." /></div><div className="specialGrid">{specialServices.map((service) => <button className="specialService" key={service.code} type="button" onClick={() => openCTA(service)}><span>{service.icon}</span><div><small>{service.code}</small><b>{service.name}</b><p>{service.area}</p></div><strong>→</strong></button>)}</div><div className="departmentHeader"><h2>🇫🇷 Tous les départements</h2><span>{filteredDepartments.length} résultats</span></div><div className="departmentGrid">{filteredDepartments.map((department) => <button key={department.code} className="departmentCard" type="button" onClick={() => chooseDepartment(department)}><span className="departmentCode">{department.code}</span><span className="departmentInfo"><b>{department.name}</b><small>{department.label}</small></span><span className="departmentArrow">→</span></button>)}</div></section>}
           </div></section>
         )
       ) : !authMode ? (
