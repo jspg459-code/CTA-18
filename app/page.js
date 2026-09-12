@@ -415,7 +415,7 @@ const operatorConsole = selectedService ? <div className="operatorConsoleInline"
                   <strong>{selectedService.name}</strong>
                   <span className="selectedSdisMeta"><i className="legendDot green"></i>{operationalStations.length} CIS • En ligne</span>
                 </div>
-              </div>}
+              </div>
 
               <div className="commandMapArea">
                 {ctaView === 'console' ? operatorConsole : ctaView === 'map' ? <>
