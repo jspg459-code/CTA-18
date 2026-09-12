@@ -319,7 +319,30 @@ export default function Home() {
     return () => { cancelled = true; };
   }, [selectedService]);
 
-  const operationalStations = useMemo(() => stations.map(buildOperationalProfile), [stations]);
+  const operationalStations = useMemo(() => {
+    const list = stations.map(buildOperationalProfile);
+    if (!activeCall || !Number.isFinite(Number(activeCall.lat)) || !Number.isFinite(Number(activeCall.lon))) return list;
+
+    const toRadians = (value) => Number(value) * Math.PI / 180;
+    const interventionLat = Number(activeCall.lat);
+    const interventionLon = Number(activeCall.lon);
+    const distanceKm = (station) => {
+      const lat = Number(station.lat);
+      const lon = Number(station.lon);
+      if (!Number.isFinite(lat) || !Number.isFinite(lon)) return Number.POSITIVE_INFINITY;
+      const earthRadius = 6371;
+      const dLat = toRadians(interventionLat - lat);
+      const dLon = toRadians(interventionLon - lon);
+      const a = Math.sin(dLat / 2) ** 2 +
+        Math.cos(toRadians(lat)) * Math.cos(toRadians(interventionLat)) *
+        Math.sin(dLon / 2) ** 2;
+      return earthRadius * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    };
+
+    return list
+      .map((station) => ({ ...station, distanceToInterventionKm: distanceKm(station) }))
+      .sort((a, b) => a.distanceToInterventionKm - b.distanceToInterventionKm);
+  }, [stations, activeCall]);
   const fleetTotals = useMemo(() => {
     const totals = {};
     operationalStations.forEach((station) => station.fleet.forEach((vehicle) => {
@@ -407,7 +430,7 @@ const operatorConsole = selectedService ? <div className="operatorConsoleInline"
   <div className="operatorTabs"><button className={operatorPanel==='calls'?'active':''} onClick={()=>setOperatorPanel('calls')}>📞 Appels</button><button className={operatorPanel==='call'?'active':''} onClick={()=>setOperatorPanel('call')}>🎧 Appel en cours</button><button className={operatorPanel==='dispatch'?'active':''} onClick={()=>setOperatorPanel('dispatch')}>🚒 Engagement</button><button className={operatorPanel==='means'?'active':''} onClick={()=>setOperatorPanel('means')}>📊 Moyens</button><button className={operatorPanel==='hospital'?'active':''} onClick={()=>setOperatorPanel('hospital')}>🏥 Transports</button></div>
   {operatorPanel==='calls' && <div className="operatorBody"><h3>📞 Déclencher un scénario de test</h3><div className="scenarioLaunchGrid">{scenarios.map(s=><button key={s.id} className="launchScenario" onClick={()=>startScenario(s)}><b>{s.category}</b><strong>{s.title}</strong><small>{s.difficulty} • {s.victimTransport?.has_victims?'Victime(s)':'Sans victime'}</small></button>)}</div>{scenarios.length===0&&<p>Aucun scénario disponible.</p>}</div>}
   {operatorPanel==='call' && <div className="operatorBody">{!activeCall?<div className="operatorEmpty">Aucun appel actif.</div>:<><div className="callCard"><span>📞 APPELANT</span><h3>{activeCall.scenario.caller||'Témoin'}</h3><p>{activeCall.scenario.description}</p></div>{activeCall.scenario.questions?.length>0&&<div className="qaOperator"><div><span>QUESTION {callQuestionIndex+1}/{activeCall.scenario.questions.length}</span><h3>{activeCall.scenario.questions[callQuestionIndex].question}</h3><p>Réponse : {activeCall.scenario.questions[callQuestionIndex].answer||'À préciser'}</p></div><div className="qaControls"><button disabled={callQuestionIndex===0} onClick={()=>setCallQuestionIndex(i=>i-1)}>←</button><button disabled={callQuestionIndex>=activeCall.scenario.questions.length-1} onClick={()=>setCallQuestionIndex(i=>i+1)}>→</button></div></div>}<button className="operatorPrimary" onClick={()=>setOperatorPanel('dispatch')}>🚒 Passer à l'engagement des moyens</button></>}</div>}
-  {operatorPanel==='dispatch' && <div className="operatorBody"><h3>🚒 Engager les moyens</h3>{!activeCall?<p>Aucune intervention sélectionnée.</p>:<><div className="dispatchRequirement"><b>Indispensables :</b> {activeCall.scenario.requiredVehicles.join(' • ')||'À définir'}</div><div className="dispatchStations">{operationalStations.slice(0,60).map(st=>{const vehicles=st.fleet||[];return <div className="dispatchStation" key={st.id}><strong>{st.name}</strong><div>{vehicles.map(v=>Array.from({length:v.count||1}).map((_,i)=><button key={v.type+i} onClick={()=>dispatchVehicle(st,v.type)}>+ {v.type}</button>))}</div></div>})}</div></>}</div>}
+  {operatorPanel==='dispatch' && <div className="operatorBody"><h3>🚒 Engager les moyens</h3>{!activeCall?<p>Aucune intervention sélectionnée.</p>:<><div className="dispatchRequirement"><b>Indispensables :</b> {activeCall.scenario.requiredVehicles.join(' • ')||'À définir'}</div><div className="dispatchStations">{operationalStations.slice(0,60).map(st=>{const vehicles=st.fleet||[];const distance=Number(st.distanceToInterventionKm);return <div className="dispatchStation" key={st.id}><strong>{st.name}</strong>{Number.isFinite(distance)&&<small>📍 {distance < 1 ? Math.round(distance*1000)+' m' : distance.toFixed(1)+' km'} de l'intervention</small>}<div>{vehicles.map(v=>Array.from({length:v.count||1}).map((_,i)=><button key={v.type+i} onClick={()=>dispatchVehicle(st,v.type)}>+ {v.type}</button>))}</div></div>})}</div></>}</div>}
   {operatorPanel==='means' && <div className="operatorBody"><h3>📊 Moyens engagés</h3>{dispatchVehicles.length===0?<p>Aucun moyen engagé.</p>:dispatchVehicles.map(v=><div className="engagedVehicle" key={v.id}><b>🚒 {v.type}</b><span>{v.stationName}</span><em>{v.status}</em>{v.type==='VSAV'&&activeCall?.scenario.victimTransport?.transport_required&&<button onClick={()=>sendVsavToHospital(v)}>🏥 Transporter</button>}</div>)}</div>}
   {operatorPanel==='hospital' && <div className="operatorBody"><h3>🏥 Gestion des transports</h3>{!activeCall?<p>Aucune intervention.</p>:!activeCall.scenario.victimTransport?.has_victims?<p>Ce scénario ne comporte aucune victime.</p>:!activeCall.scenario.victimTransport?.transport_required?<div className="transportInfo">🟢 Victime(s) prise(s) en charge — <b>aucun transport hospitalier prévu.</b></div>:<><div className="transportInfo">🚑 {activeCall.scenario.victimTransport.transport_count} victime(s) à transporter • Destination : {activeCall.scenario.victimTransport.destination_type==='nearest'?'hôpital le plus proche':'hôpital adapté automatiquement'}</div>{dispatchVehicles.filter(v=>v.type==='VSAV').map(v=><div className="engagedVehicle" key={v.id}><b>🚑 VSAV</b><span>{v.stationName}</span><em>{v.status}</em>{v.status==='TRANSPORT HÔPITAL'?<button onClick={()=>returnVsavToCis(v)}>↩️ Retour CIS</button>:<button onClick={()=>sendVsavToHospital(v)}>🏥 Envoyer à l'hôpital</button>}</div>)}</>}</div>}
 </div> : null;
