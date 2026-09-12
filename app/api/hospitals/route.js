@@ -75,6 +75,37 @@ export async function GET(request) {
     }
   }
 
+
+  // Source rapide de secours : Photon/OpenStreetMap, utile lorsque Overpass est saturé.
+  try {
+    const bbox = [west, south, east, north].join(',');
+    const queries = ['hospital', 'hôpital'];
+    const unique = new Map();
+    for (const q of queries) {
+      const url = 'https://photon.komoot.io/api/?q=' + encodeURIComponent(q) + '&bbox=' + encodeURIComponent(bbox) + '&limit=100&lang=fr';
+      const response = await fetch(url, { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
+      if (!response.ok) continue;
+      const data = await response.json();
+      for (const feature of data.features || []) {
+        const coords = feature.geometry?.coordinates || [];
+        const lon = Number(coords[0]);
+        const lat = Number(coords[1]);
+        if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+        const p = feature.properties || {};
+        const name = p.name || p.locality || p.city || 'Hôpital';
+        const address = [p.street, p.housenumber, p.postcode, p.city].filter(Boolean).join(' ');
+        const id = p.osm_type && p.osm_id ? p.osm_type + '-' + p.osm_id : name + '-' + lat + '-' + lon;
+        unique.set(id, { id, lat, lon, name, address });
+      }
+    }
+    if (unique.size) {
+      return NextResponse.json(
+        { hospitals: [...unique.values()], source: 'photon' },
+        { headers: { 'Cache-Control': 'public, s-maxage=86400, stale-while-revalidate=604800' } }
+      );
+    }
+  } catch {}
+
   return NextResponse.json(
     { hospitals: [], error: lastError?.message || 'hospital source unavailable' },
     { status: 503, headers: { 'Cache-Control': 'no-store' } }
