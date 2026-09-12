@@ -193,22 +193,22 @@ export default function Home() {
 
       {player ? (
         selectedService ? (
-          <section className="territoryPage"><div className="wrap territoryWrap">
-            <div className="commandTopline">
-              <button className="backToPicker" type="button" onClick={() => setServicePicker(true)}>← CHANGER DE SERVICE</button>
-              <span className="commandLive">● TERRITOIRE SÉLECTIONNÉ</span>
+          <section className="commandPage"><div className="wrap">
+            <button className="backToPicker" type="button" onClick={() => setServicePicker(true)}>← CHANGER DE SDIS</button>
+            <div className="commandHero">
+              <span className="authTag">CENTRE DE COMMANDEMENT • EN LIGNE</span>
+              <h1>CTA — {selectedService.name}</h1>
+              <p>Bienvenue dans votre centre de traitement de l’alerte. Vous commandez désormais le territoire de <strong>{selectedService.area}</strong>.</p>
             </div>
-            <div className="territoryHero">
-              <span className="authTag">VOTRE TERRITOIRE</span>
-              <h1>{selectedService.name}</h1>
-              <p>{selectedService.area}. Les centres ont bien été chargés. La partie opérationnelle sera ajoutée ensuite.</p>
+            <div className="commandCards">
+              <article><span>🚨</span><h3>Alertes</h3><p>Aucune intervention active pour le moment. Les prochaines alertes arriveront directement dans votre CTA.</p></article>
+              <article><span>🏢</span><h3>{stationsLoading ? '…' : stations.length} CIS</h3><p>Centres opérationnels référencés sur votre territoire.</p></article>
+              <article><span>🚒</span><h3>Engins disponibles</h3><p>Le suivi des véhicules et leur disponibilité sera géré depuis ce centre de commandement.</p></article>
             </div>
-            <div className="territoryCards">
-              <article><span>🚒</span><div><b>{stationsLoading ? '…' : stations.length}</b><small>CENTRES RÉFÉRENCÉS</small></div></article>
-              <article><span>📍</span><div><b>{selectedService.code}</b><small>SERVICE</small></div></article>
-              <article><span>🟢</span><div><b>PRÊT</b><small>ÉTAT DU TERRITOIRE</small></div></article>
+            <div className="dataStatus">
+              <div><span className="statusPill">● SYSTÈME OPÉRATIONNEL</span><h2>Vous êtes aux commandes.</h2><p>Depuis ce CTA, vous recevrez les alertes, choisirez les CIS à engager et suivrez les véhicules en intervention sur la carte avec leurs déplacements par les routes.</p></div>
+              <button className="startGame" type="button" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>OUVRIR LES OPÉRATIONS →</button>
             </div>
-            <div className="territoryNotice"><strong>Centre de commandement retiré.</strong><p>Tu restes sur la sélection du territoire pour le moment. Nous pourrons construire la partie opérationnelle plus tard, sans réintroduire cet écran.</p></div>
           </div></section>
         ) : (
           <section className="dashboardPage"><div className="wrap dashboardWrap">
