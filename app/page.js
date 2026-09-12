@@ -153,6 +153,7 @@ export default function Home() {
   const [authMessage, setAuthMessage] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
   const [player, setPlayer] = useState(null);
+  const [sessionToken, setSessionToken] = useState(null);
   const [servicePicker, setServicePicker] = useState(false);
   const [selectedService, setSelectedService] = useState(null);
   const [search, setSearch] = useState('');
@@ -167,10 +168,17 @@ export default function Home() {
   const [scenarioForm, setScenarioForm] = useState({ title:'', category:'SAP', difficulty:'Moyen', caller:'', description:'', questions:[{question:'Que s’est-il passé ?',answer:''}], requiredVehicles:[], recommendedVehicles:[], possibleReinforcements:[] });
 
   const closeAuth = () => { setAuthMode(null); setAuthMessage(''); };
-  const logout = () => { setPlayer(null); setAuthMode(null); setAuthMessage(''); setServicePicker(false); setSelectedService(null); setSearch(''); };
+  const logout = () => { setSessionToken(null); setPlayer(null); setAuthMode(null); setAuthMessage(''); setServicePicker(false); setSelectedService(null); setSearch(''); };
 
-  useEffect(() => { try { const saved = window.localStorage.getItem('cta18-scenarios-v1'); if (saved) setScenarios(JSON.parse(saved)); } catch {} }, []);
-  useEffect(() => { try { window.localStorage.setItem('cta18-scenarios-v1', JSON.stringify(scenarios)); } catch {} }, [scenarios]);
+  const scenarioApiHeaders = () => ({ 'Content-Type':'application/json', apikey:SUPABASE_KEY, Authorization:'Bearer ' + sessionToken });
+  const loadScenarios = async () => {
+    if (!sessionToken) return;
+    const response = await fetch(SUPABASE_URL + '/rest/v1/intervention_scenarios?select=*&order=created_at.desc',{headers:scenarioApiHeaders()});
+    if (!response.ok) return;
+    const rows = await response.json();
+    setScenarios(rows.map(s=>({id:s.id,title:s.title,category:s.category,difficulty:s.difficulty,caller:s.caller||'',description:s.description||'',questions:s.questions||[],requiredVehicles:s.required_vehicles||[],recommendedVehicles:s.recommended_vehicles||[],possibleReinforcements:s.possible_reinforcements||[],status:s.status,createdAt:s.created_at,createdBy:s.created_by_email})));
+  };
+  useEffect(()=>{loadScenarios();},[sessionToken]);
 
   const creatorAuthorized = player?.email?.toLowerCase() === 'jspg459@gmail.com';
   const vehicleTypes = ['VSAV','FPT','FPTL','VSR','EPA','VL','VLCG','CCF','VID','VGRIMP'];
@@ -219,7 +227,7 @@ export default function Home() {
       const data = await response.json();
       if (!response.ok) throw new Error(data?.msg || data?.message || 'Une erreur est survenue.');
       if (authMode === 'signup') setAuthMessage('Compte créé avec succès ! Vérifie ton e-mail si une confirmation est demandée.');
-      else { setPlayer(data.user); setAuthMode(null); setAuthMessage(''); }
+      else { setPlayer(data.user); setSessionToken(data.access_token); setAuthMode(null); setAuthMessage(''); }
     } catch (error) { setAuthMessage(error.message || 'Impossible de continuer.'); }
     finally { setAuthLoading(false); }
   };
@@ -314,8 +322,25 @@ export default function Home() {
 
   const playerName = player?.user_metadata?.username || player?.email?.split('@')[0];
 
+  const creatorModal = creatorOpen && creatorAuthorized ? (
+    <div className="creatorOverlay" onClick={(e)=>{if(e.target===e.currentTarget)setCreatorOpen(false)}}>
+      <div className="creatorModal">
+        <div className="creatorHeader"><div><span className="authTag">ESPACE PRIVÉ</span><h2>👑 Créateur d'interventions</h2><p>Bibliothèque nationale — jouable dans tous les départements.</p></div><button className="creatorClose" onClick={()=>setCreatorOpen(false)}>✕</button></div>
+        <div className="creatorStats"><div><b>{scenarios.length}</b><span>SCÉNARIOS CRÉÉS</span></div><div><b>{scenarios.filter(s=>s.status==='Disponible').length}</b><span>DISPONIBLES</span></div><div><b>{scenarios.filter(s=>s.requiredVehicles.length).length}</b><span>MOYENS DÉFINIS</span></div></div>
+        <div className="creatorTabs"><button className={creatorTab==='library'?'active':''} onClick={()=>setCreatorTab('library')}>📚 Interventions disponibles</button><button className={creatorTab==='create'?'active':''} onClick={()=>setCreatorTab('create')}>➕ Créer une intervention</button></div>
+        {creatorTab==='library' ? <div className="scenarioLibrary">{scenarios.length===0?<div className="scenarioEmpty"><span>🚨</span><h3>Aucun scénario pour le moment</h3><button onClick={()=>setCreatorTab('create')}>Créer le premier scénario</button></div>:scenarios.map(s=><div className="scenarioCard" key={s.id}><div className="scenarioCardTop"><span className="scenarioCategory">{s.category}</span><span className="scenarioStatus">{s.status}</span></div><h3>{s.title}</h3><p>{s.description||'Scénario national.'}</p><div className="scenarioMeta"><span>🎚️ {s.difficulty}</span><span>📞 {s.questions.length} question(s)</span><span>🚒 {s.requiredVehicles.length} indispensable(s)</span></div><div className="scenarioVehiclePreview">{s.requiredVehicles.map(v=><b key={v}>{v}</b>)}</div><div className="scenarioActions"><button onClick={()=>deleteScenario(s.id)}>Supprimer</button></div></div>)}</div>:
+        <div className="scenarioCreatorForm">
+          <div className="formSection"><h3>🚨 Identité du scénario</h3><div className="creatorGrid"><label>Nom<input value={scenarioForm.title} onChange={e=>setScenarioForm({...scenarioForm,title:e.target.value})}/></label><label>Catégorie<select value={scenarioForm.category} onChange={e=>setScenarioForm({...scenarioForm,category:e.target.value})}><option>SAP</option><option>AVP</option><option>INC</option><option>DIV</option><option>RCH</option><option>Sauvetage</option></select></label><label>Difficulté<select value={scenarioForm.difficulty} onChange={e=>setScenarioForm({...scenarioForm,difficulty:e.target.value})}><option>Facile</option><option>Moyen</option><option>Difficile</option><option>Critique</option></select></label><label>Appelant<input value={scenarioForm.caller} onChange={e=>setScenarioForm({...scenarioForm,caller:e.target.value})}/></label></div><label className="fullLabel">Description<textarea value={scenarioForm.description} onChange={e=>setScenarioForm({...scenarioForm,description:e.target.value})}/></label></div>
+          <div className="formSection"><h3>📞 Questions / réponses</h3>{scenarioForm.questions.map((q,i)=><div className="qaRow" key={i}><input value={q.question} onChange={e=>updateScenarioQuestion(i,'question',e.target.value)} placeholder="Question CTA"/><input value={q.answer} onChange={e=>updateScenarioQuestion(i,'answer',e.target.value)} placeholder="Réponse appelant"/></div>)}<button className="secondaryButton" onClick={addScenarioQuestion}>+ Ajouter une question</button></div>
+          <div className="formSection"><h3>🚒 Moyens opérationnels</h3><p className="formHint">Les moyens manquants peuvent rallonger l'intervention ou provoquer une demande automatique de renfort.</p><div className="vehicleRuleGrid">{[['requiredVehicles','🔴 Indispensables','Absents : renfort automatique'],['recommendedVehicles','🟠 Recommandés','Absents : intervention plus longue'],['possibleReinforcements','🔵 Renforts possibles','Selon évolution']].map(([field,title,desc])=><div className="vehicleRule" key={field}><h4>{title}</h4><p>{desc}</p>{vehicleTypes.map(v=><button type="button" key={v} className={scenarioForm[field].includes(v)?'selected':''} onClick={()=>toggleScenarioVehicle(field,v)}>{v}</button>)}</div>)}</div></div>
+          <div className="scenarioSaveBar"><button className="saveScenarioButton" onClick={saveScenario}>💾 Enregistrer dans la base centrale</button></div>
+        </div>}
+      </div>
+    </div>
+  ) : null;
+
   return (
-    <main className="site">
+    <main className="site">{creatorModal}
       <header className="top"><div className="wrap navWrap">
         <a className="brand" href="#home" onClick={() => { closeAuth(); setServicePicker(false); setSelectedService(null); }}><span className="shield">18</span><span>CTA <b>18</b></span></a>
         <div className="account">{player ? <>{creatorAuthorized && <button type="button" className="creatorNavButton" onClick={() => setCreatorOpen(true)}>👑 Créateur</button>}<span className="playerName">👤 {playerName}</span><button type="button" className="logout" onClick={logout}>Déconnexion</button></> : <><button type="button" onClick={() => setAuthMode('login')}>Connexion</button><button type="button" className="signup" onClick={() => setAuthMode('signup')}>Inscription</button></>}</div>
