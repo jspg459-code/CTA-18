@@ -326,6 +326,8 @@ export default function Home() {
   const personnelTotal = useMemo(() => operationalStations.reduce((sum, station) => sum + station.personnel, 0), [operationalStations]);
 
   const playerName = player?.user_metadata?.username || player?.email?.split('@')[0];
+  const activeInterventionsCount = activeCall ? 1 : 0;
+  const engagedVehiclesCount = dispatchVehicles.length;
 
   const startScenario = (scenario) => {
     const base = operationalStations[0];
@@ -395,9 +397,9 @@ const operatorConsole = selectedService ? <div className="operatorConsoleInline"
           <section className="ctaDashboard ctaCommandStyle">
             <div className="ctaStatusStrip">
               <div><b>{new Date().toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long', year:'numeric' }).toUpperCase()}</b><small>CTA 18 • simulation opérationnelle</small></div>
-              <span><i className="legendDot green"></i> Intervention(s) au total: <b>0</b></span>
-              <span><i className="legendDot green"></i> Intervention(s) en cours: <b>0</b></span>
-              <span><i className="legendDot green"></i> Véhicule(s) en interventions: <b>0</b></span>
+              <span><i className="legendDot green"></i> Intervention(s) au total: <b>{activeInterventionsCount}</b></span>
+              <span><i className="legendDot green"></i> Intervention(s) en cours: <b>{activeInterventionsCount}</b></span>
+              <span><i className="legendDot green"></i> Véhicule(s) en interventions: <b>{engagedVehiclesCount}</b></span>
               <span><i className="legendDot green"></i> Temps de réponse moyen: <b>–</b></span>
               <button>GAME ID</button>
             </div>
@@ -407,7 +409,7 @@ const operatorConsole = selectedService ? <div className="operatorConsoleInline"
                 <div className="mapToolGroup">
                   <button className={ctaView === 'console' ? 'active' : ''} type="button" onClick={() => setCtaView('console')}>Console opérationnelle</button>
                   <button className={ctaView === 'map' ? 'active' : ''} type="button" onClick={() => setCtaView('map')}>Cartographie</button>
-                  <button className={ctaView === 'activeInterventions' ? 'active' : ''} type="button" onClick={() => setCtaView('activeInterventions')}>Interventions en cours <span className="menuCounter">0</span></button>
+                  <button className={ctaView === 'activeInterventions' ? 'active' : ''} type="button" onClick={() => setCtaView('activeInterventions')}>Interventions en cours <span className="menuCounter">{activeInterventionsCount}</span></button>
                   <button className={ctaView === 'reinforcements' ? 'active' : ''} type="button" onClick={() => setCtaView('reinforcements')}>Demande de renfort <span className="menuCounter">0</span></button>
                 </div>
                 <div className="selectedSdisBadge">
@@ -423,31 +425,34 @@ const operatorConsole = selectedService ? <div className="operatorConsoleInline"
                     stations={operationalStations}
                     fallback={{ lat: 46.603354, lon: 1.888334, zoom: 6 }}
                     onStationSelect={setSelectedStation}
+                    activeIntervention={activeCall}
+                    vehicles={dispatchVehicles}
                   />
                   <div className="mapLegendOperational">
                     <div><i className="legendDot green"></i> CIS disponible</div>
                     <div><i className="legendDot red"></i> CIS engagé</div>
-                    <div><i className="legendDot orange"></i> Intervention</div>
+                    <div><i className="legendDot orange"></i> Intervention active</div>
+                    <div>🚒 Moyen engagé</div>
                     <div>🏥 Hôpital</div>
                   </div>
                 </> : ctaView === 'operations' ? <div className="synopticScreen">
                   <div className="synopticScreenHead"><span className="authTag">SYNOPTIQUE DES OPÉRATIONS</span><h2>Suivi des interventions</h2><p>Toutes les alertes et les opérations du territoire apparaîtront ici en temps réel.</p></div>
                   <div className="synopticMetricGrid">
-                    <div><b>0</b><span>APPELS EN ATTENTE</span></div>
-                    <div><b>0</b><span>INTERVENTIONS EN COURS</span></div>
-                    <div><b>0</b><span>ENGINS ENGAGÉS</span></div>
+                    <div><b>{activeCall ? 1 : 0}</b><span>APPELS EN ATTENTE</span></div>
+                    <div><b>{activeInterventionsCount}</b><span>INTERVENTIONS EN COURS</span></div>
+                    <div><b>{engagedVehiclesCount}</b><span>ENGINS ENGAGÉS</span></div>
                     <div><b>–</b><span>TEMPS MOYEN</span></div>
                   </div>
-                  <div className="synopticEmptyState"><span>🚨</span><h3>Aucune opération active</h3><p>Le tableau se remplira automatiquement dès qu'un appel sera traité.</p></div>
+                  {activeCall ? <div className="activeInterventionCard"><span>🚨</span><div><h3>{activeCall.scenario.title}</h3><p>{activeCall.address}</p><small>{activeCall.status} • {engagedVehiclesCount} moyen(x) engagé(s)</small></div></div> : <div className="synopticEmptyState"><span>🚨</span><h3>Aucune opération active</h3><p>Le tableau se remplira automatiquement dès qu'un appel sera traité.</p></div>}
                 </div> : ctaView === 'activeInterventions' ? <div className="synopticScreen activeInterventionsScreen">
                   <div className="synopticScreenHead"><span className="authTag">INTERVENTIONS EN COURS</span><h2>Suivi opérationnel en temps réel</h2><p>Toutes les interventions actives du territoire apparaîtront ici avec leur localisation, leur priorité et les moyens engagés.</p></div>
                   <div className="synopticMetricGrid">
-                    <div><b>0</b><span>INTERVENTIONS ACTIVES</span></div>
-                    <div><b>0</b><span>ENGINS ENGAGÉS</span></div>
-                    <div><b>0</b><span>PERSONNELS ENGAGÉS</span></div>
+                    <div><b>{activeInterventionsCount}</b><span>INTERVENTIONS ACTIVES</span></div>
+                    <div><b>{engagedVehiclesCount}</b><span>ENGINS ENGAGÉS</span></div>
+                    <div><b>{engagedVehiclesCount ? 'En cours' : '–'}</b><span>PERSONNELS ENGAGÉS</span></div>
                     <div><b>–</b><span>PRIORITÉ MAXIMALE</span></div>
                   </div>
-                  <div className="synopticEmptyState"><span>🚨</span><h3>Aucune intervention en cours</h3><p>Dès qu'un appel sera traité et qu'une intervention sera créée, elle apparaîtra automatiquement dans cette liste.</p></div>
+                  {activeCall ? <div className="activeInterventionCard"><span>🚨</span><div><h3>{activeCall.scenario.title}</h3><p><b>{activeCall.status}</b> • {activeCall.address}</p><div className="activeVehicleList">{dispatchVehicles.length ? dispatchVehicles.map(v=><span key={v.id}>🚒 {v.type} — {v.stationName} — {v.status}</span>) : <span>Aucun moyen encore engagé</span>}</div></div></div> : <div className="synopticEmptyState"><span>🚨</span><h3>Aucune intervention en cours</h3><p>Dès qu'un appel sera traité et qu'une intervention sera créée, elle apparaîtra automatiquement dans cette liste.</p></div>}
                 </div> : ctaView === 'reinforcements' ? <div className="synopticScreen reinforcementScreen">
                   <div className="synopticScreenHead"><span className="authTag">DEMANDES DE RENFORT</span><h2>Coordination des renforts</h2><p>Les demandes de moyens supplémentaires provenant des interventions et des CIS seront centralisées ici.</p></div>
                   <div className="synopticMetricGrid resources">
@@ -475,8 +480,8 @@ const operatorConsole = selectedService ? <div className="operatorConsoleInline"
 
             <section className="commandLowerGrid">
               <article className="operationsConsole">
-                <div className="consoleHead"><div><span className="authTag">SYNOPTIQUE DES OPÉRATIONS</span><h2>Interventions</h2></div><strong>0</strong></div>
-                <div className="operationEmpty"><span>🚨</span><div><b>Aucune intervention active</b><p>Les appels et interventions apparaîtront ici en temps réel.</p></div></div>
+                <div className="consoleHead"><div><span className="authTag">SYNOPTIQUE DES OPÉRATIONS</span><h2>Interventions</h2></div><strong>{activeInterventionsCount}</strong></div>
+                {activeCall ? <div className="operationActive"><span>🚨</span><div><b>{activeCall.scenario.title}</b><p>{activeCall.status} • {engagedVehiclesCount} moyen(x) engagé(s)</p></div></div> : <div className="operationEmpty"><span>🚨</span><div><b>Aucune intervention active</b><p>Les appels et interventions apparaîtront ici en temps réel.</p></div></div>}
                 <div className="consoleTimeline"><span className="greenLine"></span><span>Réception</span><span>Engagement</span><span>Surveillance</span><span>Clôture</span></div>
               </article>
 
