@@ -177,13 +177,27 @@ export default function Home() {
   const toggleScenarioVehicle = (field, vehicle) => setScenarioForm((form) => ({...form,[field]:form[field].includes(vehicle)?form[field].filter(x=>x!==vehicle):[...form[field],vehicle]}));
   const addScenarioQuestion = () => setScenarioForm((form) => ({...form,questions:[...form.questions,{question:'',answer:''}]}));
   const updateScenarioQuestion = (index, field, value) => setScenarioForm((form) => ({...form,questions:form.questions.map((q,i)=>i===index?{...q,[field]:value}:q)}));
-  const saveScenario = () => {
-    if (!scenarioForm.title.trim()) return;
-    setScenarios((list)=>[{id:Date.now().toString(),...scenarioForm,status:'Disponible',createdAt:new Date().toISOString(),createdBy:player?.email||'Créateur'},...list]);
+  const saveScenario = async () => {
+    if (!scenarioForm.title.trim() || !sessionToken) return;
+    const payload = {
+      title:scenarioForm.title, category:scenarioForm.category, difficulty:scenarioForm.difficulty,
+      caller:scenarioForm.caller, description:scenarioForm.description, questions:scenarioForm.questions,
+      required_vehicles:scenarioForm.requiredVehicles, recommended_vehicles:scenarioForm.recommendedVehicles,
+      possible_reinforcements:scenarioForm.possibleReinforcements, status:'Disponible',
+      created_by_email:player?.email || null
+    };
+    const response = await fetch(SUPABASE_URL + '/rest/v1/intervention_scenarios', {
+      method:'POST', headers:{...scenarioApiHeaders(), Prefer:'return=representation'}, body:JSON.stringify(payload)
+    });
+    if (!response.ok) { alert('Impossible d’enregistrer le scénario dans la base centrale.'); return; }
     setScenarioForm({title:'',category:'SAP',difficulty:'Moyen',caller:'',description:'',questions:[{question:'Que s’est-il passé ?',answer:''}],requiredVehicles:[],recommendedVehicles:[],possibleReinforcements:[]});
+    await loadScenarios();
     setCreatorTab('library');
   };
-  const deleteScenario = (id) => setScenarios((list)=>list.filter(s=>s.id!==id));
+  const deleteScenario = async (id) => {
+    const response = await fetch(SUPABASE_URL + '/rest/v1/intervention_scenarios?id=eq.' + encodeURIComponent(id), { method:'DELETE', headers:scenarioApiHeaders() });
+    if (response.ok) await loadScenarios();
+  };
 
   const filteredDepartments = useMemo(() => {
     const q = search.trim().toLowerCase();
