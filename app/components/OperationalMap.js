@@ -44,20 +44,25 @@ const engagedVehicleIcon = L.divIcon({
   popupAnchor: [0, -14],
 });
 
-function FitToStations({ stations, fallback }) {
+function FitToStations({ stations, fallback, activeIntervention, vehicles }) {
   const map = useMap();
 
   useEffect(() => {
-    const valid = stations.filter((station) => Number.isFinite(station.lat) && Number.isFinite(station.lon));
-    if (valid.length) {
-      map.fitBounds(valid.map((station) => [station.lat, station.lon]), {
+    const points = [
+      ...stations.map((station) => ({ lat:Number(station.lat), lon:Number(station.lon) })),
+      ...(activeIntervention ? [{ lat:Number(activeIntervention.lat), lon:Number(activeIntervention.lon) }] : []),
+      ...(vehicles || []).map((vehicle) => ({ lat:Number(vehicle.lat), lon:Number(vehicle.lon) })),
+    ].filter((point) => Number.isFinite(point.lat) && Number.isFinite(point.lon));
+
+    if (points.length) {
+      map.fitBounds(points.map((point) => [point.lat, point.lon]), {
         padding: [28, 28],
         maxZoom: 12,
       });
     } else {
       map.setView([fallback.lat, fallback.lon], fallback.zoom || 9);
     }
-  }, [stations, fallback, map]);
+  }, [stations, fallback, activeIntervention, vehicles, map]);
 
   return null;
 }
@@ -90,13 +95,15 @@ function AllStations({ stations, onStationSelect }) {
 }
 
 function ActiveIntervention({ intervention }) {
-  if (!intervention || !Number.isFinite(intervention.lat) || !Number.isFinite(intervention.lon)) return null;
-  return <Marker position={[intervention.lat, intervention.lon]} icon={interventionIcon}><Popup><strong>🚨 Intervention en cours</strong><br />{intervention.scenario?.title || 'Intervention'}<br /><small>{intervention.status || 'EN COURS'}</small></Popup></Marker>;
+  const lat = Number(intervention?.lat);
+  const lon = Number(intervention?.lon);
+  if (!intervention || !Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+  return <Marker position={[lat, lon]} icon={interventionIcon}><Popup><strong>🚨 Intervention en cours</strong><br />{intervention.scenario?.title || 'Intervention'}<br />📍 {intervention.address || 'Localisation opérationnelle'}<br /><small>{intervention.status || 'EN COURS'}</small></Popup></Marker>;
 }
 
 function EngagedVehicles({ vehicles = [] }) {
-  return vehicles.filter((vehicle) => Number.isFinite(vehicle.lat) && Number.isFinite(vehicle.lon)).map((vehicle) => (
-    <Marker key={vehicle.id} position={[vehicle.lat, vehicle.lon]} icon={engagedVehicleIcon}>
+  return vehicles.filter((vehicle) => Number.isFinite(Number(vehicle.lat)) && Number.isFinite(Number(vehicle.lon))).map((vehicle) => (
+    <Marker key={vehicle.id} position={[Number(vehicle.lat), Number(vehicle.lon)]} icon={engagedVehicleIcon}>
       <Popup><strong>🚒 {vehicle.type}</strong><br />{vehicle.stationName}<br /><small>{vehicle.status}</small></Popup>
     </Marker>
   ));
@@ -207,7 +214,7 @@ export default function OperationalMap({ stations, fallback, onStationSelect, tr
           maxZoom={19}
         />
 
-        <FitToStations stations={stations} fallback={fallback} />
+        <FitToStations stations={stations} fallback={fallback} activeIntervention={activeIntervention} vehicles={vehicles} />
         <AllStations stations={stations} onStationSelect={onStationSelect} />
         <AllHospitals hospitals={hospitals} />
         <ActiveIntervention intervention={activeIntervention} />
