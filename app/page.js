@@ -210,7 +210,7 @@ export default function Home() {
   useEffect(() => {
     if (!selectedService) return;
     let cancelled = false;
-    const cacheKey = 'cta18-stations-v4-' + selectedService.code;
+    const cacheKey = 'cta18-stations-v5-' + selectedService.code;
 
     const readCache = () => {
       try {
@@ -229,49 +229,41 @@ export default function Home() {
     setStationsError('');
 
     const loadStations = async () => {
-      let lastError = '';
+      try {
+        // URL stable : permet au navigateur et au CDN Vercel de réutiliser le cache.
+        // L'ancienne version ajoutait un timestamp et forçait une requête Overpass complète à chaque ouverture.
+        const response = await fetch(
+          '/api/stations?code=' + encodeURIComponent(selectedService.code),
+          { cache: 'force-cache' }
+        );
 
-      // Une réponse 503 ne doit jamais rester bloquée dans le cache du navigateur.
-      // On réessaie automatiquement avec une URL unique et sans cache.
-      for (let attempt = 0; attempt < 3; attempt += 1) {
-        try {
-          const separator = attempt === 0 ? '&' : '&';
-          const response = await fetch(
-            '/api/stations?code=' + encodeURIComponent(selectedService.code) +
-            separator + '_=' + Date.now() + '-' + attempt,
-            { cache: 'no-store', headers: { 'Cache-Control': 'no-cache' } }
-          );
+        const data = await response.json();
+        if (!response.ok) throw new Error(data?.error || 'Le serveur des centres est temporairement indisponible.');
 
-          const data = await response.json();
-          if (!response.ok) throw new Error(data?.error || 'Le serveur des centres est temporairement indisponible.');
+        const nextStations = Array.isArray(data.stations) ? data.stations : [];
+        if (!nextStations.length) throw new Error('Aucun centre retourné pour ce territoire.');
 
-          const nextStations = Array.isArray(data.stations) ? data.stations : [];
-          if (!nextStations.length) throw new Error('Aucun centre retourné pour ce territoire.');
-
-          if (!cancelled) {
-            setStations(nextStations);
-            setStationsError('');
-            try {
-              window.localStorage.setItem(cacheKey, JSON.stringify({ stations: nextStations, savedAt: Date.now() }));
-            } catch {}
-          }
-          return;
-        } catch (error) {
-          lastError = error?.message || 'Impossible de charger les centres.';
-          if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 700 * (attempt + 1)));
+        if (!cancelled) {
+          setStations(nextStations);
+          setStationsError('');
+          try {
+            window.localStorage.setItem(cacheKey, JSON.stringify({ stations: nextStations, savedAt: Date.now() }));
+          } catch {}
         }
-      }
-
-      if (!cancelled) {
-        // On conserve les données déjà connues plutôt que d'effacer brutalement le CTA.
-        if (!cachedStations?.length) setStations([]);
-        setStationsError(lastError || 'Impossible de charger les centres pour le moment.');
+      } catch (error) {
+        if (!cancelled) {
+          // Les centres déjà présents restent immédiatement utilisables.
+          if (!cachedStations?.length) setStations([]);
+          setStationsError(error?.message || 'Impossible de charger les centres. Réessayez.');
+        }
+      } finally {
+        if (!cancelled) setStationsLoading(false);
       }
     };
 
-    loadStations().finally(() => {
-      if (!cancelled) setStationsLoading(false);
-    });
+    // Si le territoire a déjà été ouvert, l'affichage est instantané depuis le stockage local.
+    // La synchronisation réseau se fait ensuite sans vider la liste.
+    loadStations();
 
     return () => { cancelled = true; };
   }, [selectedService]);
