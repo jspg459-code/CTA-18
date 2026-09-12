@@ -28,6 +28,22 @@ const vsavTransportIcon = L.divIcon({
   popupAnchor: [0, -12],
 });
 
+const interventionIcon = L.divIcon({
+  className: 'interventionMarkerWrap',
+  html: '<div class="interventionMarker">🚨</div>',
+  iconSize: [28, 28],
+  iconAnchor: [14, 14],
+  popupAnchor: [0, -16],
+});
+
+const engagedVehicleIcon = L.divIcon({
+  className: 'engagedVehicleMarkerWrap',
+  html: '<div class="engagedVehicleMarker">🚒</div>',
+  iconSize: [24, 24],
+  iconAnchor: [12, 12],
+  popupAnchor: [0, -14],
+});
+
 function FitToStations({ stations, fallback }) {
   const map = useMap();
 
@@ -73,6 +89,19 @@ function AllStations({ stations, onStationSelect }) {
   ));
 }
 
+function ActiveIntervention({ intervention }) {
+  if (!intervention || !Number.isFinite(intervention.lat) || !Number.isFinite(intervention.lon)) return null;
+  return <Marker position={[intervention.lat, intervention.lon]} icon={interventionIcon}><Popup><strong>🚨 Intervention en cours</strong><br />{intervention.scenario?.title || 'Intervention'}<br /><small>{intervention.status || 'EN COURS'}</small></Popup></Marker>;
+}
+
+function EngagedVehicles({ vehicles = [] }) {
+  return vehicles.filter((vehicle) => Number.isFinite(vehicle.lat) && Number.isFinite(vehicle.lon)).map((vehicle) => (
+    <Marker key={vehicle.id} position={[vehicle.lat, vehicle.lon]} icon={engagedVehicleIcon}>
+      <Popup><strong>🚒 {vehicle.type}</strong><br />{vehicle.stationName}<br /><small>{vehicle.status}</small></Popup>
+    </Marker>
+  ));
+}
+
 function VsavTransports({ transports, hospitals }) {
   return transports.map((transport) => {
     const hospital = hospitals.find((h) => h.id === transport.hospitalId);
@@ -109,7 +138,7 @@ function buildHospitalQuery(stations, fallback) {
   return `[out:json][timeout:35];(nwr["amenity"="hospital"](${south},${west},${north},${east});nwr["healthcare"="hospital"](${south},${west},${north},${east}););out center tags;`;
 }
 
-export default function OperationalMap({ stations, fallback, onStationSelect, transports = [] }) {
+export default function OperationalMap({ stations, fallback, onStationSelect, transports = [], activeIntervention = null, vehicles = [] }) {
   const center = useMemo(() => [fallback.lat, fallback.lon], [fallback]);
   const [hospitals, setHospitals] = useState([]);
 
@@ -181,6 +210,8 @@ export default function OperationalMap({ stations, fallback, onStationSelect, tr
         <FitToStations stations={stations} fallback={fallback} />
         <AllStations stations={stations} onStationSelect={onStationSelect} />
         <AllHospitals hospitals={hospitals} />
+        <ActiveIntervention intervention={activeIntervention} />
+        <EngagedVehicles vehicles={vehicles} />
         <VsavTransports transports={transports} hospitals={hospitals} />
       </MapContainer>
     </div>
