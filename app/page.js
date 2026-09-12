@@ -1,6 +1,9 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
+
+const OperationalMap = dynamic(() => import('./components/OperationalMap'), { ssr: false });
 
 const SUPABASE_URL = 'https://zypntdqemnehqgogwntu.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_OQ2mszgzlwfBRMVPCi33zw_jOT-hadJ';
@@ -127,6 +130,9 @@ export default function Home() {
   const [servicePicker, setServicePicker] = useState(false);
   const [selectedService, setSelectedService] = useState(null);
   const [search, setSearch] = useState('');
+  const [stations, setStations] = useState([]);
+  const [stationsLoading, setStationsLoading] = useState(false);
+  const [stationsError, setStationsError] = useState('');
 
   const closeAuth = () => { setAuthMode(null); setAuthMessage(''); };
   const logout = () => { setPlayer(null); setAuthMode(null); setAuthMessage(''); setServicePicker(false); setSelectedService(null); setSearch(''); };
@@ -162,6 +168,31 @@ export default function Home() {
     setServicePicker(false); setSearch('');
   };
 
+  useEffect(() => {
+    if (!selectedService) return;
+    let cancelled = false;
+    const loadStations = async () => {
+      setStationsLoading(true); setStationsError(''); setStations([]);
+      let query;
+      if (selectedService.code === 'BSPP') query = '[out:json][timeout:45];nwr["amenity"="fire_station"](48.30,1.85,49.10,3.05);out center tags;';
+      else if (selectedService.code === 'BMPM') query = '[out:json][timeout:45];nwr["amenity"="fire_station"](43.05,5.15,43.55,5.75);out center tags;';
+      else query = '[out:json][timeout:60];rel["boundary"="administrative"]["admin_level"="6"]["ref:INSEE"="' + selectedService.code + '"]->.dep;map_to_area->.a;nwr["amenity"="fire_station"](area.a);out center tags;';
+      try {
+        const response = await fetch('https://overpass-api.de/api/interpreter', { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=UTF-8' }, body: query });
+        if (!response.ok) throw new Error('Impossible de charger les centres pour le moment.');
+        const data = await response.json(); const seen = new Set();
+        const parsed = (data.elements || []).map((element) => {
+          const tags = element.tags || {}; const lat = element.lat ?? element.center?.lat; const lon = element.lon ?? element.center?.lon;
+          const address = tags['addr:full'] || [tags['addr:housenumber'], tags['addr:street'], tags['addr:postcode'], tags['addr:city']].filter(Boolean).join(' ');
+          return { id: element.type + '-' + element.id, lat, lon, name: tags.name || tags.short_name || tags.ref || 'Centre d’incendie et de secours', address, ref: tags.ref || tags['ref:FR:SDIS'] || '', type: tags['fire_station:type:FR'] || '' };
+        }).filter((station) => station.lat && station.lon).filter((station) => { const key = station.lat.toFixed(5) + ',' + station.lon.toFixed(5); if (seen.has(key)) return false; seen.add(key); return true; }).sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+        if (!cancelled) setStations(parsed);
+      } catch (error) { if (!cancelled) setStationsError(error.message || 'Erreur lors du chargement des centres.'); }
+      finally { if (!cancelled) setStationsLoading(false); }
+    };
+    loadStations(); return () => { cancelled = true; };
+  }, [selectedService]);
+
   const playerName = player?.user_metadata?.username || player?.email?.split('@')[0];
 
   return (
@@ -175,9 +206,10 @@ export default function Home() {
         selectedService ? (
           <section className="commandPage"><div className="wrap">
             <button className="backToPicker" type="button" onClick={() => setServicePicker(true)}>← CHANGER DE SERVICE</button>
-            <div className="commandHero"><span className="authTag">CENTRE DE COMMANDEMENT ACTIF</span><h1>{selectedService.name}</h1><p>Territoire commandé : {selectedService.area}. La fondation du jeu est prête pour recevoir les CIS réels, leurs adresses et leurs coordonnées GPS exactes.</p></div>
-            <div className="commandCards"><article><span>🗺️</span><h3>Carte opérationnelle</h3><p>Les CIS seront positionnés à leurs coordonnées réelles.</p></article><article><span>🚒</span><h3>Centres réels</h3><p>Base nationale structurée par service, adresse et position GPS.</p></article><article><span>🛣️</span><h3>Itinéraires routiers</h3><p>Les futurs engins suivront le réseau routier réel.</p></article></div>
-            <div className="dataStatus"><div><span className="statusPill">ÉTAPE 1</span><h2>Fondation géographique du territoire</h2><p>Le service est sélectionné. CTA 18 est maintenant prêt à recevoir les données exactes des CIS.</p></div><button type="button" className="startGame" onClick={() => setServicePicker(true)}>VOIR TOUS LES SERVICES →</button></div>
+            <div className="commandHero"><span className="authTag">TERRITOIRE SÉLECTIONNÉ</span><h1>{selectedService.name}</h1><p>Voici les centres d’incendie et de secours actuellement référencés sur la carte pour votre territoire. Chaque point correspond à une position géographique réelle.</p></div>
+            <div className="territoryStats"><div><b>{stationsLoading ? '…' : stations.length}</b><span>CIS chargés</span></div><div><b>📍</b><span>Positions géographiques</span></div><div><b>🗺️</b><span>Carte interactive</span></div></div>
+            <section className="cisMapPanel"><div className="cisPanelHead"><div><span className="authTag">CARTE DES CENTRES</span><h2>Vos CIS sur le territoire</h2></div><span className={stationsLoading ? 'mapStatus loading' : 'mapStatus'}>{stationsLoading ? 'CHARGEMENT…' : '● EN LIGNE'}</span></div><OperationalMap stations={stations} fallback={{ lat: 46.603354, lon: 1.888334, zoom: 6 }} /><div className="mapLegend"><span><i></i>CIS référencé</span><span>Source cartographique : OpenStreetMap</span></div></section>
+            <section className="cisDirectory"><div className="directoryHead"><div><span className="authTag">CENTRES OPÉRATIONNELS</span><h2>Liste des CIS</h2><p>Les centres affichés sont ceux actuellement disponibles dans la base cartographique.</p></div><b>{stationsLoading ? 'Chargement…' : stations.length + ' centre' + (stations.length > 1 ? 's' : '')}</b></div>{stationsError ? <div className="stationsError">{stationsError}</div> : null}{stationsLoading ? <div className="stationLoading">Chargement des centres du territoire…</div> : <div className="stationList">{stations.map((station) => <article className="stationRow" key={station.id}><span className="stationIcon">🚒</span><div><b>{station.name}</b><p>{station.address || 'Adresse à compléter dans la fiche du centre'}</p>{station.ref && <small>Réf. {station.ref}</small>}</div><span className="stationType">{station.type || 'CIS'}</span></article>)}</div>}{!stationsLoading && !stationsError && stations.length === 0 ? <div className="stationLoading">Aucun centre n’a été trouvé automatiquement pour ce territoire.</div> : null}</section>
           </div></section>
         ) : (
           <section className="dashboardPage"><div className="wrap dashboardWrap">
