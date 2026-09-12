@@ -38,9 +38,9 @@ function FitToStations({ stations, fallback }) {
   return null;
 }
 
-function ClusteredStations({ stations }) {
+function ClusteredStations({ stations, onStationSelect }) {
   const map = useMap();
-  const [, setRevision] = useState(0);
+  const [revision, setRevision] = useState(0);
 
   useMapEvents({
     zoomend: () => setRevision((value) => value + 1),
@@ -61,7 +61,7 @@ function ClusteredStations({ stations }) {
     });
 
     return Array.from(groups.values());
-  }, [stations, map, map.getZoom()]);
+  }, [stations, map, revision]);
 
   return (
     <>
@@ -73,6 +73,7 @@ function ClusteredStations({ stations }) {
               key={station.id}
               position={[station.lat, station.lon]}
               icon={stationIcon}
+              eventHandlers={{ click: () => onStationSelect?.(station) }}
             >
               <Popup>
                 <strong>{station.name}</strong><br />
@@ -103,7 +104,7 @@ function ClusteredStations({ stations }) {
   );
 }
 
-export default function OperationalMap({ stations, fallback }) {
+export default function OperationalMap({ stations, fallback, onStationSelect }) {
   const center = useMemo(() => [fallback.lat, fallback.lon], [fallback]);
 
   return (
@@ -121,7 +122,7 @@ export default function OperationalMap({ stations, fallback }) {
         />
 
         <FitToStations stations={stations} fallback={fallback} />
-        <ClusteredStations stations={stations} />
+        <ClusteredStations stations={stations} onStationSelect={onStationSelect} />
       </MapContainer>
     </div>
   );
