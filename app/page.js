@@ -239,79 +239,54 @@ export default function Home() {
 
       {player ? (
         selectedService ? (
-          <section className="commandPage"><div className="wrap">
-            <div className="commandTopline">
-              <button className="backToPicker" type="button" onClick={() => setServicePicker(true)}>← CHANGER DE SDIS</button>
-              <span className="commandLive">● SYSTÈME EN LIGNE</span>
-            </div>
+          <section className="opsGame">
+            <header className="opsHeader">
+              <div className="opsBrand"><span>🚨</span><div><b>CTA 18</b><small>{selectedService.name}</small></div></div>
+              <nav className="opsNav"><button className="active">OPÉRATIONS</button><button>INTERVENTIONS <i>0</i></button><button>ENGINS</button><button>PERSONNELS</button><button>CIS</button><button>BUDGET</button></nav>
+              <div className="opsStatus"><span>● EN SERVICE</span><button type="button" onClick={() => setServicePicker(true)}>⚙</button></div>
+            </header>
 
-            <div className="commandCenterHero">
-              <span className="authTag">CTA OPÉRATIONNEL • {selectedService.code}</span>
-              <h1>Centre de commandement</h1>
-              <p>Vous êtes aux commandes du territoire <strong>{selectedService.area}</strong>. Les alertes et les interventions apparaîtront ici.</p>
-            </div>
-
-            <div className="commandStatsGrid">
-              <article><span className="statIcon alert">🚨</span><div><b>0</b><small>ALERTE ACTIVE</small></div></article>
-              <article><span className="statIcon">🏢</span><div><b>{stationsLoading ? '…' : stations.length}</b><small>CIS RÉFÉRENCÉS</small></div></article>
-              <article><span className="statIcon">🚒</span><div><b>{Object.values(fleetTotals).reduce((sum, value) => sum + value, 0)}</b><small>ENGINS EN BASE</small></div></article>
-              <article><span className="statIcon">👨‍🚒</span><div><b>{personnelTotal}</b><small>PERSONNELS EN BASE</small></div></article>
-            </div>
-
-            <div className="commandBoard">
-              <article className="activeAlertCard">
-                <div className="boardHeader"><span>🚨 CENTRE DE TRAITEMENT DES ALERTES</span><b>EN ATTENTE</b></div>
-                <div className="activeAlertBody">
-                  <div className="incidentEmoji">📟</div>
-                  <div className="incidentContent">
-                    <small>AUCUNE ALERTE EN COURS</small>
-                    <h2>Le CTA est prêt.</h2>
-                    <p>La prochaine intervention apparaîtra ici avec son adresse, son niveau de priorité et les moyens à engager.</p>
-                    <div className="incidentMeta"><span>📍 Territoire : {selectedService.area}</span><span>📡 Réseau opérationnel actif</span></div>
-                    <button className="dispatchButton" type="button">EN ATTENTE D'UNE ALERTE</button>
-                  </div>
+            <main className="opsLayout">
+              <section className="opsMapPanel">
+                <div className="opsMapToolbar">
+                  <div><span className="authTag">CENTRE OPÉRATIONNEL</span><h1>CTA — {selectedService.area}</h1></div>
+                  <div className="mapChips"><span>🏢 {stationsLoading ? '…' : stations.length} CIS</span><span>🚒 {Object.values(fleetTotals).reduce((sum, value) => sum + value, 0)} engins</span></div>
                 </div>
-              </article>
+                <div className="opsMap">
+                  <div className="mapGrid"></div>
+                  <div className="mapWater waterOne"></div><div className="mapWater waterTwo"></div>
+                  <div className="mapRoad r1"></div><div className="mapRoad r2"></div><div className="mapRoad r3"></div><div className="mapRoad r4"></div>
+                  <div className="mapLabel">CARTE OPÉRATIONNELLE<br/><b>{selectedService.area.toUpperCase()}</b></div>
+                  <div className="mapStationDots">
+                    {operationalStations.slice(0, 18).map((station,index)=><button key={station.id||station.name||index} className="stationPin" style={{left:(12+(index*23)%76)+'%',top:(18+(index*37)%68)+'%'}} onClick={()=>setSelectedStation(station)} title={station.name}>🚒</button>)}
+                  </div>
+                  <div className="mapLegend"><span><i className="legendDot green"></i>CIS disponible</span><span><i className="legendDot red"></i>Intervention</span></div>
+                  <div className="mapControls"><button>+</button><button>−</button><button>⌖</button></div>
+                </div>
+              </section>
 
-              <aside className="commandSidePanel">
-                <div className="sidePanelTitle"><span>ÉTAT DU TERRITOIRE</span><b>● NORMAL</b></div>
-                <div className="territoryLine"><span>CIS opérationnels</span><strong>{stationsLoading ? '…' : stations.length}</strong><em className="ok">DISPONIBLE</em></div>
-                <div className="territoryLine"><span>Interventions</span><strong>0</strong><em className="ok">CALME</em></div>
-                <div className="territoryLine"><span>Alertes en attente</span><strong>0</strong><em className="ok">AUCUNE</em></div>
-                <button className="secondaryCommandButton" type="button" onClick={() => setServicePicker(true)}>CHANGER DE TERRITOIRE</button>
+              <aside className="opsRight">
+                <section className="interventionPanel">
+                  <div className="panelTitle"><div><span>📟 SYNOPTIQUE DES INTERVENTIONS</span><b>EN DIRECT</b></div><strong>0</strong></div>
+                  <div className="emptyIntervention"><div className="emptyIcon">🚨</div><h2>Aucune intervention</h2><p>Le CTA est en attente d'une nouvelle alerte.</p><span>Les interventions apparaîtront ici en temps réel.</span></div>
+                </section>
+                <section className="miniLog">
+                  <div className="miniLogTitle">JOURNAL OPÉRATIONNEL</div>
+                  <p><i className="legendDot green"></i><b>CTA connecté</b><br/>Territoire chargé et prêt.</p>
+                  <p><i className="legendDot gray"></i>En attente d'une alerte.</p>
+                </section>
               </aside>
-            </div>
+            </main>
 
-            <section className="fleetSection">
-              <div className="sectionBar"><div><span className="authTag">MOYENS OPÉRATIONNELS</span><h2>Flotte de départ du territoire</h2></div><button type="button" onClick={() => setSelectedStation(null)}>VUE GLOBALE</button></div>
-              <p className="fleetNotice">Les données publiques vérifiées seront intégrées progressivement. Les CIS sans flotte publique détaillée utilisent actuellement la base opérationnelle CTA 18, modifiable plus tard par les achats du joueur.</p>
-              <div className="fleetGrid">
-                {Object.entries(fleetTotals).map(([type, count]) => <article className="vehicleCard" key={type}><span>{type === 'VSAV' ? '🚑' : type === 'VL' ? '🚙' : '🚒'}</span><div><b>{type} × {count}</b><small>{vehicleCatalog[type]}</small></div><em>BASE OPÉRATIONNELLE</em></article>)}
+            <section className="fleetSynopsis">
+              <div className="fleetSynopsisHead"><div><span className="authTag">SYNOPTIQUE DES ENGINS</span><h2>Moyens opérationnels</h2></div><div className="fleetTotal"><b>{Object.values(fleetTotals).reduce((sum, value) => sum + value, 0)}</b><span>ENGINS AU TOTAL</span></div></div>
+              <div className="fleetSynopsisGrid">
+                {Object.entries(fleetTotals).map(([type,count])=><button className="synVehicle" key={type}><span>{type==='VSAV'?'🚑':type==='VL'?'🚙':'🚒'}</span><div><b>{type}</b><small>{vehicleCatalog[type]}</small></div><strong>{count}</strong><em>● DISPONIBLE</em></button>)}
               </div>
             </section>
 
-            <section className="fleetSection">
-              <div className="sectionBar"><div><span className="authTag">CENTRES DU TERRITOIRE</span><h2>CIS et moyens affectés</h2></div><button type="button">CLIQUER SUR UN CIS →</button></div>
-              <div className="stationOperationsGrid">
-                {operationalStations.map((station, index) => <button className="stationOperationCard" type="button" key={station.id || station.name || index} onClick={() => setSelectedStation(station)}>
-                  <span className="stationNumber">{index + 1}</span><div><b>{station.name}</b><small>👨‍🚒 {station.personnel} personnels • 🚒 {station.fleet.reduce((sum, v) => sum + v.count, 0)} engins</small></div><strong>→</strong>
-                </button>)}
-                {!stationsLoading && !operationalStations.length && <p>Aucun CIS chargé pour le moment.</p>}
-              </div>
-              {selectedStation && <div className="stationDetail">
-                <div><span className="authTag">{selectedStation.source}</span><h3>{selectedStation.name}</h3><p>{selectedStation.address || selectedService.area}</p><b>👨‍🚒 Personnel de départ : {selectedStation.personnel}</b></div>
-                <div className="stationFleetList">{selectedStation.fleet.map((vehicle) => <div key={vehicle.type}><strong>{vehicle.type} × {vehicle.count}</strong><span>{vehicleCatalog[vehicle.type]}</span></div>)}</div>
-              </div>}
-            </section>
-
-            <section className="commandActivity">
-              <div className="sectionBar"><div><span className="authTag">JOURNAL OPÉRATIONNEL</span><h2>Activité du CTA</h2></div></div>
-              <div className="activityList">
-                <div><span className="activityDot green"></span><p><b>CTA connecté</b> — Votre territoire {selectedService.area} est chargé et prêt à jouer.</p></div>
-                <div><span className="activityDot gray"></span><p>En attente de la première alerte opérationnelle.</p></div>
-              </div>
-            </section>
-          </div></section>
+            {selectedStation && <section className="selectedStationBar"><div><span className="authTag">CIS SÉLECTIONNÉ</span><h3>{selectedStation.name}</h3><p>👨‍🚒 {selectedStation.personnel} personnels • {selectedStation.fleet.map(v=>v.type+' × '+v.count).join(' • ')}</p></div><button onClick={()=>setSelectedStation(null)}>FERMER ✕</button></section>}
+          </section>
         ) : (
           <section className="dashboardPage"><div className="wrap dashboardWrap">
             {!servicePicker ? <><div className="dashboardWelcome"><span className="authTag">ESPACE JOUEUR</span><h1>Bienvenue, <span>{playerName}</span> 👋</h1><p>Choisissez maintenant le territoire réel que vous allez commander.</p></div><div className="dashboardGrid"><article className="gameCard primaryGameCard"><div className="gameIcon">🇫🇷</div><span className="cardLabel">NOUVELLE PARTIE</span><h2>Choisissez votre service</h2><p>Tous les départements français sont disponibles, avec la BSPP et le BMPM.</p><button className="startGame" type="button" onClick={() => setServicePicker(true)}>CHOISIR MON SDIS →</button></article><div className="dashboardSide"><article className="miniCard"><span>🇫🇷</span><div><b>{departments.length} départements</b><p>Une sélection nationale complète.</p></div></article><article className="miniCard"><span>🗼</span><div><b>BSPP</b><p>Paris et petite couronne.</p></div></article><article className="miniCard"><span>⚓</span><div><b>BMPM</b><p>Marseille.</p></div></article></div></div></> :
