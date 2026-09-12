@@ -409,7 +409,6 @@ const operatorConsole = selectedService ? <div className="operatorConsoleInline"
                   <button className={ctaView === 'map' ? 'active' : ''} type="button" onClick={() => setCtaView('map')}>Cartographie</button>
                   <button className={ctaView === 'activeInterventions' ? 'active' : ''} type="button" onClick={() => setCtaView('activeInterventions')}>Interventions en cours <span className="menuCounter">0</span></button>
                   <button className={ctaView === 'reinforcements' ? 'active' : ''} type="button" onClick={() => setCtaView('reinforcements')}>Demande de renfort <span className="menuCounter">0</span></button>
-                  <button className={ctaView === 'resources' ? 'active' : ''} type="button" onClick={() => setCtaView('resources')}>Synoptique des moyens</button>
                 </div>
               </div>
 
