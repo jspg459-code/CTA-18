@@ -170,27 +170,41 @@ export default function Home() {
 
   useEffect(() => {
     if (!selectedService) return;
+
     let cancelled = false;
+
     const loadStations = async () => {
-      setStationsLoading(true); setStationsError(''); setStations([]);
-      let query;
-      if (selectedService.code === 'BSPP') query = '[out:json][timeout:45];nwr["amenity"="fire_station"](48.30,1.85,49.10,3.05);out center tags;';
-      else if (selectedService.code === 'BMPM') query = '[out:json][timeout:45];nwr["amenity"="fire_station"](43.05,5.15,43.55,5.75);out center tags;';
-      else query = '[out:json][timeout:60];rel["boundary"="administrative"]["admin_level"="6"]["ref:INSEE"="' + selectedService.code + '"]->.dep;map_to_area->.a;nwr["amenity"="fire_station"](area.a);out center tags;';
+      setStationsLoading(true);
+      setStationsError('');
+      setStations([]);
+
       try {
-        const response = await fetch('https://overpass-api.de/api/interpreter', { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=UTF-8' }, body: query });
-        if (!response.ok) throw new Error('Impossible de charger les centres pour le moment.');
-        const data = await response.json(); const seen = new Set();
-        const parsed = (data.elements || []).map((element) => {
-          const tags = element.tags || {}; const lat = element.lat ?? element.center?.lat; const lon = element.lon ?? element.center?.lon;
-          const address = tags['addr:full'] || [tags['addr:housenumber'], tags['addr:street'], tags['addr:postcode'], tags['addr:city']].filter(Boolean).join(' ');
-          return { id: element.type + '-' + element.id, lat, lon, name: tags.name || tags.short_name || tags.ref || 'Centre d’incendie et de secours', address, ref: tags.ref || tags['ref:FR:SDIS'] || '', type: tags['fire_station:type:FR'] || '' };
-        }).filter((station) => station.lat && station.lon).filter((station) => { const key = station.lat.toFixed(5) + ',' + station.lon.toFixed(5); if (seen.has(key)) return false; seen.add(key); return true; }).sort((a, b) => a.name.localeCompare(b.name, 'fr'));
-        if (!cancelled) setStations(parsed);
-      } catch (error) { if (!cancelled) setStationsError(error.message || 'Erreur lors du chargement des centres.'); }
-      finally { if (!cancelled) setStationsLoading(false); }
+        const response = await fetch('/api/stations?code=' + encodeURIComponent(selectedService.code));
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data?.error || 'Impossible de charger les centres pour le moment.');
+        }
+
+        if (!cancelled) {
+          setStations(Array.isArray(data.stations) ? data.stations : []);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setStationsError(
+            error.message || 'Impossible de charger les centres pour le moment.'
+          );
+        }
+      } finally {
+        if (!cancelled) setStationsLoading(false);
+      }
     };
-    loadStations(); return () => { cancelled = true; };
+
+    loadStations();
+
+    return () => {
+      cancelled = true;
+    };
   }, [selectedService]);
 
   const playerName = player?.user_metadata?.username || player?.email?.split('@')[0];
