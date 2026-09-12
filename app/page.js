@@ -162,6 +162,11 @@ export default function Home() {
   const [stationsError, setStationsError] = useState('');
   const [selectedStation, setSelectedStation] = useState(null);
   const [ctaView, setCtaView] = useState('map');
+  const [activeCall, setActiveCall] = useState(null);
+  const [operatorPanel, setOperatorPanel] = useState('calls');
+  const [dispatchVehicles, setDispatchVehicles] = useState([]);
+  const [callQuestionIndex, setCallQuestionIndex] = useState(0);
+  const [transportStatus, setTransportStatus] = useState(null);
   const [creatorOpen, setCreatorOpen] = useState(false);
   const [creatorTab, setCreatorTab] = useState('library');
   const [scenarios, setScenarios] = useState([]);
@@ -322,6 +327,36 @@ export default function Home() {
 
   const playerName = player?.user_metadata?.username || player?.email?.split('@')[0];
 
+  const startScenario = (scenario) => {
+    const base = operationalStations[0];
+    const call = { id:Date.now().toString(), scenario, status:'APPEL EN COURS', address:'Adresse générée automatiquement lors de l’alerte', lat:base?.lat||46.6, lon:base?.lon||1.88, startedAt:Date.now() };
+    setActiveCall(call); setDispatchVehicles([]); setCallQuestionIndex(0); setOperatorPanel('call'); setCtaView('operations');
+  };
+  const dispatchVehicle = (station, type) => {
+    if (!activeCall) return;
+    const item={id:Date.now()+'-'+type,stationId:station.id,stationName:station.name,type,status:'EN ROUTE',lat:station.lat,lon:station.lon};
+    setDispatchVehicles(list=>[...list,item]);
+    setActiveCall(call=>({...call,status:'MOYENS ENGAGÉS'}));
+  };
+  const sendVsavToHospital = (vehicle) => {
+    setDispatchVehicles(list=>list.map(v=>v.id===vehicle.id?{...v,status:'TRANSPORT HÔPITAL'}:v));
+    setTransportStatus({vehicleId:vehicle.id,vehicleName:vehicle.type+' '+vehicle.stationName,lat:activeCall?.lat,lon:activeCall?.lon});
+  };
+  const returnVsavToCis = (vehicle) => {
+    setDispatchVehicles(list=>list.map(v=>v.id===vehicle.id?{...v,status:'RETOUR CIS'}:v));
+    setTransportStatus(null);
+  };
+
+const operatorConsole = selectedService ? <div className="operatorConsole">
+  <div className="operatorHeader"><div><span className="authTag">POSTE OPÉRATEUR CTA</span><h2>Console opérationnelle</h2></div><div className="operatorStatus">{activeCall ? '🔴 '+activeCall.status : '🟢 EN ATTENTE D’ALERTE'}</div></div>
+  <div className="operatorTabs"><button className={operatorPanel==='calls'?'active':''} onClick={()=>setOperatorPanel('calls')}>📞 Appels</button><button className={operatorPanel==='call'?'active':''} onClick={()=>setOperatorPanel('call')}>🎧 Appel en cours</button><button className={operatorPanel==='dispatch'?'active':''} onClick={()=>setOperatorPanel('dispatch')}>🚒 Engagement</button><button className={operatorPanel==='means'?'active':''} onClick={()=>setOperatorPanel('means')}>📊 Moyens</button><button className={operatorPanel==='hospital'?'active':''} onClick={()=>setOperatorPanel('hospital')}>🏥 Transports</button></div>
+  {operatorPanel==='calls' && <div className="operatorBody"><h3>📞 Déclencher un scénario de test</h3><div className="scenarioLaunchGrid">{scenarios.map(s=><button key={s.id} className="launchScenario" onClick={()=>startScenario(s)}><b>{s.category}</b><strong>{s.title}</strong><small>{s.difficulty} • {s.victimTransport?.has_victims?'Victime(s)':'Sans victime'}</small></button>)}</div>{scenarios.length===0&&<p>Aucun scénario disponible.</p>}</div>}
+  {operatorPanel==='call' && <div className="operatorBody">{!activeCall?<div className="operatorEmpty">Aucun appel actif.</div>:<><div className="callCard"><span>📞 APPELANT</span><h3>{activeCall.scenario.caller||'Témoin'}</h3><p>{activeCall.scenario.description}</p></div>{activeCall.scenario.questions?.length>0&&<div className="qaOperator"><div><span>QUESTION {callQuestionIndex+1}/{activeCall.scenario.questions.length}</span><h3>{activeCall.scenario.questions[callQuestionIndex].question}</h3><p>Réponse : {activeCall.scenario.questions[callQuestionIndex].answer||'À préciser'}</p></div><div className="qaControls"><button disabled={callQuestionIndex===0} onClick={()=>setCallQuestionIndex(i=>i-1)}>←</button><button disabled={callQuestionIndex>=activeCall.scenario.questions.length-1} onClick={()=>setCallQuestionIndex(i=>i+1)}>→</button></div></div>}<button className="operatorPrimary" onClick={()=>setOperatorPanel('dispatch')}>🚒 Passer à l'engagement des moyens</button></>}</div>}
+  {operatorPanel==='dispatch' && <div className="operatorBody"><h3>🚒 Engager les moyens</h3>{!activeCall?<p>Aucune intervention sélectionnée.</p>:<><div className="dispatchRequirement"><b>Indispensables :</b> {activeCall.scenario.requiredVehicles.join(' • ')||'À définir'}</div><div className="dispatchStations">{operationalStations.slice(0,60).map(st=>{const vehicles=st.vehicles||[];return <div className="dispatchStation" key={st.id}><strong>{st.name}</strong><div>{vehicles.map(v=>Array.from({length:v.count||1}).map((_,i)=><button key={v.type+i} onClick={()=>dispatchVehicle(st,v.type)}>+ {v.type}</button>))}</div></div>})}</div></>}</div>}
+  {operatorPanel==='means' && <div className="operatorBody"><h3>📊 Moyens engagés</h3>{dispatchVehicles.length===0?<p>Aucun moyen engagé.</p>:dispatchVehicles.map(v=><div className="engagedVehicle" key={v.id}><b>🚒 {v.type}</b><span>{v.stationName}</span><em>{v.status}</em>{v.type==='VSAV'&&activeCall?.scenario.victimTransport?.transport_required&&<button onClick={()=>sendVsavToHospital(v)}>🏥 Transporter</button>}</div>)}</div>}
+  {operatorPanel==='hospital' && <div className="operatorBody"><h3>🏥 Gestion des transports</h3>{!activeCall?<p>Aucune intervention.</p>:!activeCall.scenario.victimTransport?.has_victims?<p>Ce scénario ne comporte aucune victime.</p>:!activeCall.scenario.victimTransport?.transport_required?<div className="transportInfo">🟢 Victime(s) prise(s) en charge — <b>aucun transport hospitalier prévu.</b></div>:<><div className="transportInfo">🚑 {activeCall.scenario.victimTransport.transport_count} victime(s) à transporter • Destination : {activeCall.scenario.victimTransport.destination_type==='nearest'?'hôpital le plus proche':'hôpital adapté automatiquement'}</div>{dispatchVehicles.filter(v=>v.type==='VSAV').map(v=><div className="engagedVehicle" key={v.id}><b>🚑 VSAV</b><span>{v.stationName}</span><em>{v.status}</em>{v.status==='TRANSPORT HÔPITAL'?<button onClick={()=>returnVsavToCis(v)}>↩️ Retour CIS</button>:<button onClick={()=>sendVsavToHospital(v)}>🏥 Envoyer à l'hôpital</button>}</div>)}</>}</div>}
+</div> : null;
+
   const creatorModal = creatorOpen && creatorAuthorized ? (
     <div className="creatorOverlay" onClick={(e)=>{if(e.target===e.currentTarget)setCreatorOpen(false)}}>
       <div className="creatorModal">
@@ -349,7 +384,7 @@ export default function Home() {
   ) : null;
 
   return (
-    <main className="site">{creatorModal}
+    <main className="site">{creatorModal}{operatorConsole}
       <header className="top"><div className="wrap navWrap">
         <a className="brand" href="#home" onClick={() => { closeAuth(); setServicePicker(false); setSelectedService(null); }}><span className="shield">18</span><span>CTA <b>18</b></span></a>
         <div className="account">{player ? <>{creatorAuthorized && <button type="button" className="creatorNavButton" onClick={() => setCreatorOpen(true)}>👑 Créateur</button>}<span className="playerName">👤 {playerName}</span><button type="button" className="logout" onClick={logout}>Déconnexion</button></> : <><button type="button" onClick={() => setAuthMode('login')}>Connexion</button><button type="button" className="signup" onClick={() => setAuthMode('signup')}>Inscription</button></>}</div>
