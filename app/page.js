@@ -219,11 +219,66 @@ export default function Home() {
       {player ? (
         selectedService ? (
           <section className="commandPage"><div className="wrap">
-            <button className="backToPicker" type="button" onClick={() => setServicePicker(true)}>← CHANGER DE SERVICE</button>
-            <div className="commandHero"><span className="authTag">TERRITOIRE SÉLECTIONNÉ</span><h1>{selectedService.name}</h1><p>Voici les centres d’incendie et de secours actuellement référencés sur la carte pour votre territoire. Chaque point correspond à une position géographique réelle.</p></div>
-            <div className="territoryStats"><div><b>{stationsLoading ? '…' : stations.length}</b><span>CIS chargés</span></div><div><b>📍</b><span>Positions géographiques</span></div><div><b>🗺️</b><span>Carte interactive</span></div></div>
-            <section className="cisMapPanel"><div className="cisPanelHead"><div><span className="authTag">CARTE DES CENTRES</span><h2>Vos CIS sur le territoire</h2></div><span className={stationsLoading ? 'mapStatus loading' : 'mapStatus'}>{stationsLoading ? 'CHARGEMENT…' : '● EN LIGNE'}</span></div><OperationalMap stations={stations} fallback={{ lat: 46.603354, lon: 1.888334, zoom: 6 }} /><div className="mapLegend"><span><i></i>CIS référencé</span><span>Source cartographique : OpenStreetMap</span></div></section>
-            <section className="cisDirectory"><div className="directoryHead"><div><span className="authTag">CENTRES OPÉRATIONNELS</span><h2>Liste des CIS</h2><p>Les centres affichés sont ceux actuellement disponibles dans la base cartographique.</p></div><b>{stationsLoading ? 'Chargement…' : stations.length + ' centre' + (stations.length > 1 ? 's' : '')}</b></div>{stationsError ? <div className="stationsError">{stationsError}</div> : null}{stationsLoading ? <div className="stationLoading">Chargement des centres du territoire…</div> : <div className="stationList">{stations.map((station) => <article className="stationRow" key={station.id}><span className="stationIcon">🚒</span><div><b>{station.name}</b><p>{station.address || 'Adresse à compléter dans la fiche du centre'}</p>{station.ref && <small>Réf. {station.ref}</small>}</div><span className="stationType">{station.type || 'CIS'}</span></article>)}</div>}{!stationsLoading && !stationsError && stations.length === 0 ? <div className="stationLoading">Aucun centre n’a été trouvé automatiquement pour ce territoire.</div> : null}</section>
+            <div className="commandTopline">
+              <button className="backToPicker" type="button" onClick={() => setServicePicker(true)}>← CHANGER DE SERVICE</button>
+              <span className="commandLive">● CENTRE OPÉRATIONNEL</span>
+            </div>
+
+            <div className="commandHero commandCenterHero">
+              <span className="authTag">CENTRE DE COMMANDEMENT</span>
+              <h1>{selectedService.name}</h1>
+              <p>Bienvenue au CTA. Surveillez votre territoire, gérez les moyens disponibles et répondez aux alertes.</p>
+            </div>
+
+            <section className="commandStatsGrid">
+              <article><span className="statIcon alert">🚨</span><div><b>01</b><small>ALERTE ACTIVE</small></div></article>
+              <article><span className="statIcon">🚒</span><div><b>{stationsLoading ? '…' : stations.length}</b><small>CIS RÉFÉRENCÉS</small></div></article>
+              <article><span className="statIcon">🟢</span><div><b>12</b><small>ENGINS DISPONIBLES</small></div></article>
+              <article><span className="statIcon">👨‍🚒</span><div><b>86</b><small>EFFECTIFS EN SERVICE</small></div></article>
+            </section>
+
+            <section className="commandBoard">
+              <article className="activeAlertCard">
+                <div className="boardHeader"><span>🚨 NOUVELLE ALERTE</span><b>PRIORITÉ 1</b></div>
+                <div className="activeAlertBody">
+                  <div className="incidentEmoji">🔥</div>
+                  <div className="incidentContent">
+                    <small>INCENDIE</small>
+                    <h2>Feu d'habitation</h2>
+                    <p>Une intervention nécessite l'engagement immédiat de moyens.</p>
+                    <div className="incidentMeta"><span>📍 Adresse à déterminer</span><span>🕒 À l'instant</span></div>
+                    <button type="button" className="dispatchButton">OUVRIR L'INTERVENTION →</button>
+                  </div>
+                </div>
+              </article>
+
+              <aside className="commandSidePanel">
+                <div className="sidePanelTitle"><span>ÉTAT DU TERRITOIRE</span><b>● EN SERVICE</b></div>
+                <div className="territoryLine"><span>Centres</span><strong>{stationsLoading ? '…' : stations.length}</strong><em className="ok">●</em></div>
+                <div className="territoryLine"><span>Engins disponibles</span><strong>12</strong><em className="ok">●</em></div>
+                <div className="territoryLine"><span>Interventions</span><strong>01</strong><em className="danger">●</em></div>
+                <button type="button" className="secondaryCommandButton">VOIR LA CARTE DU TERRITOIRE 🗺️</button>
+              </aside>
+            </section>
+
+            <section className="fleetSection">
+              <div className="sectionBar"><div><span className="authTag">MOYENS OPÉRATIONNELS</span><h2>Parc des véhicules</h2></div><button type="button">VOIR TOUS LES ENGINS →</button></div>
+              <div className="fleetGrid">
+                <article className="vehicleCard"><span>🚒</span><div><b>FPT</b><small>Fourgon pompe-tonne</small></div><em>● DISPONIBLE</em></article>
+                <article className="vehicleCard"><span>🚒</span><div><b>VSAV</b><small>Secours et assistance</small></div><em>● DISPONIBLE</em></article>
+                <article className="vehicleCard"><span>🚒</span><div><b>EPA</b><small>Échelle aérienne</small></div><em>● DISPONIBLE</em></article>
+                <article className="vehicleCard engaged"><span>🚑</span><div><b>VSR</b><small>Secours routier</small></div><em>● EN INTERVENTION</em></article>
+              </div>
+            </section>
+
+            <section className="commandActivity">
+              <div className="sectionBar"><div><span className="authTag">SUIVI EN DIRECT</span><h2>Activité du CTA</h2></div></div>
+              <div className="activityList">
+                <div><span className="activityDot red"></span><p><b>14:56</b> — Nouvelle alerte reçue : Feu d'habitation.</p></div>
+                <div><span className="activityDot green"></span><p><b>14:48</b> — Un véhicule est redevenu disponible.</p></div>
+                <div><span className="activityDot gray"></span><p><b>14:31</b> — Mise à jour opérationnelle du territoire.</p></div>
+              </div>
+            </section>
           </div></section>
         ) : (
           <section className="dashboardPage"><div className="wrap dashboardWrap">
