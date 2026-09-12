@@ -122,6 +122,20 @@ const specialServices = [
   { code: 'BMPM', name: 'Bataillon de marins-pompiers de Marseille', area: 'Marseille', icon: '⚓' },
 ];
 
+// FUTUR SYSTÈME D'APPEL / ENGAGEMENT
+// Quand un appel réel de la simulation apparaîtra :
+// 1. géolocaliser précisément l'appel ;
+// 2. calculer la distance/temps vers tous les CIS disponibles ;
+// 3. proposer en premier le CIS disponible le plus proche ;
+// 4. permettre ensuite au joueur de sélectionner les engins et personnels à engager ;
+// 5. mettre à jour en temps réel la disponibilité des moyens sur la carte et les synoptiques.
+const futureCallDispatchRules = {
+  priority: 'nearest_available_station',
+  vehicleSelection: 'player_selects_available_resources',
+  routing: 'call_location_to_station_distance',
+  realtimeAvailability: true,
+};
+
 const vehicleCatalog = {
   VSAV: 'Véhicule de secours et d’assistance aux victimes',
   FPT: 'Fourgon pompe-tonne',
@@ -209,15 +223,24 @@ export default function Home() {
   useEffect(() => {
     if (!selectedService) return;
     let cancelled = false;
-    const cacheKey = 'cta18-stations-v2-' + selectedService.code;
+    const cacheKey = 'cta18-stations-v3-' + selectedService.code;
 
     const readCache = () => {
       try {
-        const raw = window.localStorage.getItem(cacheKey);
-        if (!raw) return null;
-        const cached = JSON.parse(raw);
-        if (!Array.isArray(cached?.stations)) return null;
-        return cached.stations;
+        // Compatibilité avec les anciennes versions : on ne laisse jamais
+        // une mise à jour du cache faire disparaître des CIS déjà chargés.
+        const keys = [
+          cacheKey,
+          'cta18-stations-v2-' + selectedService.code,
+          'cta18-stations-' + selectedService.code,
+        ];
+        for (const key of keys) {
+          const raw = window.localStorage.getItem(key);
+          if (!raw) continue;
+          const cached = JSON.parse(raw);
+          if (Array.isArray(cached?.stations) && cached.stations.length) return cached.stations;
+        }
+        return null;
       } catch {
         return null;
       }
@@ -233,24 +256,33 @@ export default function Home() {
     }
 
     const loadStations = async () => {
-      try {
-        const response = await fetch('/api/stations?code=' + encodeURIComponent(selectedService.code), {
-          cache: 'force-cache',
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data?.error || 'Impossible de charger les centres.');
-        const nextStations = Array.isArray(data.stations) ? data.stations : [];
-        if (!cancelled) {
-          setStations(nextStations);
-          try {
-            window.localStorage.setItem(cacheKey, JSON.stringify({ stations: nextStations, savedAt: Date.now() }));
-          } catch {}
+      let lastError;
+      // Plusieurs tentatives courtes : le CTA ne doit pas rester bloqué à 0 CIS
+      // lorsqu'un miroir cartographique répond lentement.
+      for (let attempt = 0; attempt < 3 && !cancelled; attempt += 1) {
+        try {
+          const response = await fetch('/api/stations?code=' + encodeURIComponent(selectedService.code) + '&attempt=' + attempt, {
+            cache: 'no-store',
+          });
+          const data = await response.json();
+          if (!response.ok) throw new Error(data?.error || 'Impossible de charger les centres.');
+          const nextStations = Array.isArray(data.stations) ? data.stations : [];
+          if (!nextStations.length) throw new Error('Aucun centre retourné');
+          if (!cancelled) {
+            setStations(nextStations);
+            try {
+              window.localStorage.setItem(cacheKey, JSON.stringify({ stations: nextStations, savedAt: Date.now() }));
+            } catch {}
+          }
+          lastError = null;
+          break;
+        } catch (error) {
+          lastError = error;
+          if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)));
         }
-      } catch {
-        if (!cancelled && !cachedStations?.length) setStations([]);
-      } finally {
-        if (!cancelled) setStationsLoading(false);
       }
+      if (lastError && !cancelled && !cachedStations?.length) setStations([]);
+      if (!cancelled) setStationsLoading(false);
     };
 
     loadStations();
