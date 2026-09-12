@@ -332,3 +332,60 @@ footer{background:#171c23;color:#a8b0b8}.footerWrap{padding:28px 0;display:flex;
     font-size:6px;
   }
 }
+
+
+/* Correctif position du SDIS : panneau fixé dans l'angle supérieur droit de la carte */
+.ctaMapCommand{position:relative!important;}
+.commandMapToolbar{
+  position:absolute!important;
+  top:9px!important;
+  left:8px!important;
+  right:8px!important;
+  width:auto!important;
+  min-height:48px!important;
+}
+.commandMapToolbar .mapToolGroup{
+  margin-right:150px!important;
+}
+.commandMapToolbar .selectedSdisBadge{
+  position:absolute!important;
+  top:0!important;
+  right:0!important;
+  margin:0!important;
+  z-index:700!important;
+  width:145px!important;
+  min-width:145px!important;
+  max-width:145px!important;
+  padding:8px 10px!important;
+  border-radius:6px!important;
+  background:rgba(255,255,255,.97)!important;
+  border:1px solid #d6dde0!important;
+  box-shadow:0 3px 10px rgba(20,30,40,.14)!important;
+}
+.commandMapToolbar .selectedSdisBadge strong{
+  font-size:15px!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+.commandMapToolbar .selectedSdisLabel{font-size:6px!important;}
+.commandMapToolbar .selectedSdisMeta{font-size:7px!important;}
+
+@media(max-width:700px){
+  .commandMapToolbar{
+    top:7px!important;
+    left:6px!important;
+    right:6px!important;
+  }
+  .commandMapToolbar .mapToolGroup{
+    margin-right:136px!important;
+    max-width:calc(100% - 136px)!important;
+  }
+  .commandMapToolbar .selectedSdisBadge{
+    width:128px!important;
+    min-width:128px!important;
+    max-width:128px!important;
+    padding:7px 8px!important;
+  }
+  .commandMapToolbar .selectedSdisBadge strong{font-size:12px!important;}
+}
