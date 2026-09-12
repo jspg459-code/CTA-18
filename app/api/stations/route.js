@@ -6,6 +6,10 @@ const OVERPASS_ENDPOINTS = [
   'https://overpass.nchc.org.tw/api/interpreter',
 ];
 
+const CACHE_TTL = 1000 * 60 * 30;
+const stationCache = new Map();
+const pendingQueries = new Map();
+
 function buildQuery(code) {
   if (code === 'BSPP') {
     return '[out:json][timeout:60];nwr["amenity"="fire_station"](48.30,1.85,49.10,3.05);out center tags;';
@@ -19,10 +23,11 @@ function buildQuery(code) {
 }
 
 async function queryOverpass(query) {
-  let lastError;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 18000);
 
-  for (const endpoint of OVERPASS_ENDPOINTS) {
-    try {
+  try {
+    const attempts = OVERPASS_ENDPOINTS.map(async (endpoint) => {
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
@@ -31,19 +36,19 @@ async function queryOverpass(query) {
         },
         body: query,
         cache: 'no-store',
+        signal: controller.signal,
       });
 
-      if (!response.ok) {
-        throw new Error('Service cartographique indisponible (' + response.status + ')');
-      }
+      if (!response.ok) throw new Error('Service cartographique indisponible (' + response.status + ')');
+      return response.json();
+    });
 
-      return await response.json();
-    } catch (error) {
-      lastError = error;
-    }
+    const data = await Promise.any(attempts);
+    controller.abort();
+    return data;
+  } finally {
+    clearTimeout(timeout);
   }
-
-  throw lastError || new Error('Impossible de contacter les services cartographiques.');
 }
 
 function normalizeStations(elements) {
@@ -99,25 +104,35 @@ export async function GET(request) {
     return NextResponse.json({ error: 'Code de territoire manquant.' }, { status: 400 });
   }
 
-  try {
-    const data = await queryOverpass(buildQuery(code));
+  const now = Date.now();
+  const cached = stationCache.get(code);
+  if (cached && now - cached.createdAt < CACHE_TTL) {
     return NextResponse.json(
-      {
-        stations: normalizeStations(data.elements),
-        source: 'OpenStreetMap / Overpass',
-      },
-      {
-        headers: {
-          'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
-        },
-      }
+      { stations: cached.stations, source: 'OpenStreetMap / Overpass', cached: true },
+      { headers: { 'Cache-Control': 'public, max-age=300, s-maxage=1800, stale-while-revalidate=86400' } }
     );
-  } catch (error) {
+  }
+
+  if (!pendingQueries.has(code)) {
+    const pending = (async () => {
+      const data = await queryOverpass(buildQuery(code));
+      const stations = normalizeStations(data.elements);
+      stationCache.set(code, { stations, createdAt: Date.now() });
+      return stations;
+    })().finally(() => pendingQueries.delete(code));
+
+    pendingQueries.set(code, pending);
+  }
+
+  try {
+    const stations = await pendingQueries.get(code);
     return NextResponse.json(
-      {
-        error:
-          'Impossible de charger les centres pour le moment. Réessayez dans quelques instants.',
-      },
+      { stations, source: 'OpenStreetMap / Overpass', cached: false },
+      { headers: { 'Cache-Control': 'public, max-age=300, s-maxage=1800, stale-while-revalidate=86400' } }
+    );
+  } catch {
+    return NextResponse.json(
+      { error: 'Impossible de charger les centres pour le moment. Réessayez dans quelques instants.' },
       { status: 503 }
     );
   }
