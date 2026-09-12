@@ -1,9 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import dynamic from 'next/dynamic';
-
-const OperationalMap = dynamic(() => import('./components/OperationalMap'), { ssr: false });
 
 const SUPABASE_URL = 'https://zypntdqemnehqgogwntu.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_OQ2mszgzlwfBRMVPCi33zw_jOT-hadJ';
@@ -132,7 +129,6 @@ export default function Home() {
   const [search, setSearch] = useState('');
   const [stations, setStations] = useState([]);
   const [stationsLoading, setStationsLoading] = useState(false);
-  const [stationsError, setStationsError] = useState('');
 
   const closeAuth = () => { setAuthMode(null); setAuthMessage(''); };
   const logout = () => { setPlayer(null); setAuthMode(null); setAuthMessage(''); setServicePicker(false); setSelectedService(null); setSearch(''); };
@@ -170,41 +166,20 @@ export default function Home() {
 
   useEffect(() => {
     if (!selectedService) return;
-
     let cancelled = false;
-
     const loadStations = async () => {
       setStationsLoading(true);
-      setStationsError('');
       setStations([]);
-
       try {
         const response = await fetch('/api/stations?code=' + encodeURIComponent(selectedService.code));
         const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data?.error || 'Impossible de charger les centres pour le moment.');
-        }
-
-        if (!cancelled) {
-          setStations(Array.isArray(data.stations) ? data.stations : []);
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setStationsError(
-            error.message || 'Impossible de charger les centres pour le moment.'
-          );
-        }
-      } finally {
-        if (!cancelled) setStationsLoading(false);
-      }
+        if (!response.ok) throw new Error(data?.error || 'Impossible de charger les centres.');
+        if (!cancelled) setStations(Array.isArray(data.stations) ? data.stations : []);
+      } catch { if (!cancelled) setStations([]); }
+      finally { if (!cancelled) setStationsLoading(false); }
     };
-
     loadStations();
-
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [selectedService]);
 
   const playerName = player?.user_metadata?.username || player?.email?.split('@')[0];
@@ -212,77 +187,32 @@ export default function Home() {
   return (
     <main className="site">
       <header className="top"><div className="wrap navWrap">
-        <a className="brand" href="#home" onClick={() => { closeAuth(); setServicePicker(false); }}><span className="shield">18</span><span>CTA <b>18</b></span></a>
+        <a className="brand" href="#home" onClick={() => { closeAuth(); setServicePicker(false); setSelectedService(null); }}><span className="shield">18</span><span>CTA <b>18</b></span></a>
         <div className="account">{player ? <><span className="playerName">👤 {playerName}</span><button type="button" className="logout" onClick={logout}>Déconnexion</button></> : <><button type="button" onClick={() => setAuthMode('login')}>Connexion</button><button type="button" className="signup" onClick={() => setAuthMode('signup')}>Inscription</button></>}</div>
       </div></header>
 
       {player ? (
         selectedService ? (
-          <section className="commandPage"><div className="wrap">
+          <section className="territoryPage"><div className="wrap territoryWrap">
             <div className="commandTopline">
               <button className="backToPicker" type="button" onClick={() => setServicePicker(true)}>← CHANGER DE SERVICE</button>
-              <span className="commandLive">● CENTRE OPÉRATIONNEL</span>
+              <span className="commandLive">● TERRITOIRE SÉLECTIONNÉ</span>
             </div>
-
-            <div className="commandHero commandCenterHero">
-              <span className="authTag">CENTRE DE COMMANDEMENT</span>
+            <div className="territoryHero">
+              <span className="authTag">VOTRE TERRITOIRE</span>
               <h1>{selectedService.name}</h1>
-              <p>Bienvenue au CTA. Surveillez votre territoire, gérez les moyens disponibles et répondez aux alertes.</p>
+              <p>{selectedService.area}. Les centres ont bien été chargés. La partie opérationnelle sera ajoutée ensuite.</p>
             </div>
-
-            <section className="commandStatsGrid">
-              <article><span className="statIcon alert">🚨</span><div><b>01</b><small>ALERTE ACTIVE</small></div></article>
-              <article><span className="statIcon">🚒</span><div><b>{stationsLoading ? '…' : stations.length}</b><small>CIS RÉFÉRENCÉS</small></div></article>
-              <article><span className="statIcon">🟢</span><div><b>12</b><small>ENGINS DISPONIBLES</small></div></article>
-              <article><span className="statIcon">👨‍🚒</span><div><b>86</b><small>EFFECTIFS EN SERVICE</small></div></article>
-            </section>
-
-            <section className="commandBoard">
-              <article className="activeAlertCard">
-                <div className="boardHeader"><span>🚨 NOUVELLE ALERTE</span><b>PRIORITÉ 1</b></div>
-                <div className="activeAlertBody">
-                  <div className="incidentEmoji">🔥</div>
-                  <div className="incidentContent">
-                    <small>INCENDIE</small>
-                    <h2>Feu d'habitation</h2>
-                    <p>Une intervention nécessite l'engagement immédiat de moyens.</p>
-                    <div className="incidentMeta"><span>📍 Adresse à déterminer</span><span>🕒 À l'instant</span></div>
-                    <button type="button" className="dispatchButton">OUVRIR L'INTERVENTION →</button>
-                  </div>
-                </div>
-              </article>
-
-              <aside className="commandSidePanel">
-                <div className="sidePanelTitle"><span>ÉTAT DU TERRITOIRE</span><b>● EN SERVICE</b></div>
-                <div className="territoryLine"><span>Centres</span><strong>{stationsLoading ? '…' : stations.length}</strong><em className="ok">●</em></div>
-                <div className="territoryLine"><span>Engins disponibles</span><strong>12</strong><em className="ok">●</em></div>
-                <div className="territoryLine"><span>Interventions</span><strong>01</strong><em className="danger">●</em></div>
-                <button type="button" className="secondaryCommandButton">VOIR LA CARTE DU TERRITOIRE 🗺️</button>
-              </aside>
-            </section>
-
-            <section className="fleetSection">
-              <div className="sectionBar"><div><span className="authTag">MOYENS OPÉRATIONNELS</span><h2>Parc des véhicules</h2></div><button type="button">VOIR TOUS LES ENGINS →</button></div>
-              <div className="fleetGrid">
-                <article className="vehicleCard"><span>🚒</span><div><b>FPT</b><small>Fourgon pompe-tonne</small></div><em>● DISPONIBLE</em></article>
-                <article className="vehicleCard"><span>🚒</span><div><b>VSAV</b><small>Secours et assistance</small></div><em>● DISPONIBLE</em></article>
-                <article className="vehicleCard"><span>🚒</span><div><b>EPA</b><small>Échelle aérienne</small></div><em>● DISPONIBLE</em></article>
-                <article className="vehicleCard engaged"><span>🚑</span><div><b>VSR</b><small>Secours routier</small></div><em>● EN INTERVENTION</em></article>
-              </div>
-            </section>
-
-            <section className="commandActivity">
-              <div className="sectionBar"><div><span className="authTag">SUIVI EN DIRECT</span><h2>Activité du CTA</h2></div></div>
-              <div className="activityList">
-                <div><span className="activityDot red"></span><p><b>14:56</b> — Nouvelle alerte reçue : Feu d'habitation.</p></div>
-                <div><span className="activityDot green"></span><p><b>14:48</b> — Un véhicule est redevenu disponible.</p></div>
-                <div><span className="activityDot gray"></span><p><b>14:31</b> — Mise à jour opérationnelle du territoire.</p></div>
-              </div>
-            </section>
+            <div className="territoryCards">
+              <article><span>🚒</span><div><b>{stationsLoading ? '…' : stations.length}</b><small>CENTRES RÉFÉRENCÉS</small></div></article>
+              <article><span>📍</span><div><b>{selectedService.code}</b><small>SERVICE</small></div></article>
+              <article><span>🟢</span><div><b>PRÊT</b><small>ÉTAT DU TERRITOIRE</small></div></article>
+            </div>
+            <div className="territoryNotice"><strong>Centre de commandement retiré.</strong><p>Tu restes sur la sélection du territoire pour le moment. Nous pourrons construire la partie opérationnelle plus tard, sans réintroduire cet écran.</p></div>
           </div></section>
         ) : (
           <section className="dashboardPage"><div className="wrap dashboardWrap">
-            {!servicePicker ? <><div className="dashboardWelcome"><span className="authTag">CENTRE DE COMMANDEMENT</span><h1>Bienvenue, <span>{playerName}</span> 👋</h1><p>Votre compte est prêt. Choisissez maintenant le territoire réel que vous allez commander.</p></div><div className="dashboardGrid"><article className="gameCard primaryGameCard"><div className="gameIcon">🇫🇷</div><span className="cardLabel">NOUVELLE PARTIE</span><h2>Choisissez votre service</h2><p>Tous les départements français sont disponibles, avec la BSPP et le BMPM.</p><button className="startGame" type="button" onClick={() => setServicePicker(true)}>CHOISIR MON SDIS →</button></article><div className="dashboardSide"><article className="miniCard"><span>🇫🇷</span><div><b>{departments.length} départements</b><p>Une sélection nationale complète.</p></div></article><article className="miniCard"><span>🗼</span><div><b>BSPP</b><p>Paris et petite couronne.</p></div></article><article className="miniCard"><span>⚓</span><div><b>BMPM</b><p>Marseille.</p></div></article></div></div></> :
+            {!servicePicker ? <><div className="dashboardWelcome"><span className="authTag">ESPACE JOUEUR</span><h1>Bienvenue, <span>{playerName}</span> 👋</h1><p>Choisissez maintenant le territoire réel que vous allez commander.</p></div><div className="dashboardGrid"><article className="gameCard primaryGameCard"><div className="gameIcon">🇫🇷</div><span className="cardLabel">NOUVELLE PARTIE</span><h2>Choisissez votre service</h2><p>Tous les départements français sont disponibles, avec la BSPP et le BMPM.</p><button className="startGame" type="button" onClick={() => setServicePicker(true)}>CHOISIR MON SDIS →</button></article><div className="dashboardSide"><article className="miniCard"><span>🇫🇷</span><div><b>{departments.length} départements</b><p>Une sélection nationale complète.</p></div></article><article className="miniCard"><span>🗼</span><div><b>BSPP</b><p>Paris et petite couronne.</p></div></article><article className="miniCard"><span>⚓</span><div><b>BMPM</b><p>Marseille.</p></div></article></div></div></> :
               <section className="servicePicker"><button className="backToPicker" type="button" onClick={() => { setServicePicker(false); setSearch(''); }}>← RETOUR</button><div className="pickerHead"><span className="authTag">NOUVELLE PARTIE</span><h1>Choisissez votre territoire</h1><p>Recherchez un département, un SDIS ou choisissez directement la BSPP et le BMPM.</p><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Ex. 59, Nord, SDIS 62..." /></div><div className="specialGrid">{specialServices.map((service) => <button className="specialService" key={service.code} type="button" onClick={() => { setSelectedService(service); setServicePicker(false); }}><span>{service.icon}</span><div><small>{service.code}</small><b>{service.name}</b><p>{service.area}</p></div><strong>→</strong></button>)}</div><div className="departmentHeader"><h2>🇫🇷 Tous les départements</h2><span>{filteredDepartments.length} résultats</span></div><div className="departmentGrid">{filteredDepartments.map((department) => <button key={department.code} className="departmentCard" type="button" onClick={() => chooseDepartment(department)}><span className="departmentCode">{department.code}</span><span className="departmentInfo"><b>{department.name}</b><small>{department.label}</small></span><span className="departmentArrow">→</span></button>)}</div></section>}
           </div></section>
         )
@@ -291,7 +221,6 @@ export default function Home() {
       ) : (
         <section className="authPage"><div className="authCard"><button className="authBack" type="button" onClick={closeAuth}>← Retour à l'accueil</button><div className="authLogo"><span className="shield">18</span><b>CTA 18</b></div>{authMode === 'login' ? <><span className="authTag">ESPACE JOUEUR</span><h1>Bon retour parmi les secours.</h1><p className="authIntro">Connectez-vous pour retrouver votre SDIS et votre progression.</p><form onSubmit={handleAuth}><label>Adresse e-mail</label><input name="email" type="email" placeholder="vous@exemple.fr" required /><label>Mot de passe</label><input name="password" type="password" placeholder="••••••••" required /><button className="authSubmit" type="submit" disabled={authLoading}>{authLoading ? 'CONNEXION...' : 'SE CONNECTER →'}</button>{authMessage && <p className="authMessage">{authMessage}</p>}</form><p className="authSwitch">Pas encore de compte ? <button type="button" onClick={() => setAuthMode('signup')}>Créer un compte</button></p></> : <><span className="authTag">REJOINDRE CTA 18</span><h1>Prêt à prendre le commandement ?</h1><p className="authIntro">Créez votre compte joueur et préparez-vous à gérer votre premier territoire.</p><form onSubmit={handleAuth}><label>Pseudo</label><input name="username" type="text" placeholder="Votre pseudo" required /><label>Adresse e-mail</label><input name="email" type="email" placeholder="vous@exemple.fr" required /><label>Mot de passe</label><input name="password" type="password" placeholder="Minimum 6 caractères" minLength="6" required /><button className="authSubmit" type="submit" disabled={authLoading}>{authLoading ? 'CRÉATION...' : 'CRÉER MON COMPTE →'}</button>{authMessage && <p className="authMessage">{authMessage}</p>}</form><p className="authSwitch">Déjà inscrit ? <button type="button" onClick={() => setAuthMode('login')}>Se connecter</button></p></>}</div></section>
       )}
-
       <footer><div className="wrap footerWrap"><div><b>CTA 18</b><span>Jeu de gestion et de simulation des secours</span></div><span>© 2026 CTA 18</span></div></footer>
     </main>
   );
