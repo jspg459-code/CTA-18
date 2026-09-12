@@ -2,10 +2,55 @@
 
 import { useState } from 'react';
 
+const SUPABASE_URL = 'https://zypntdqemnehqgogwntu.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_OQ2mszgzlwfBRMVPCi33zw_jOT-hadJ';
+
 export default function Home() {
   const [authMode, setAuthMode] = useState(null);
+  const [authMessage, setAuthMessage] = useState('');
+  const [authLoading, setAuthLoading] = useState(false);
 
-  const closeAuth = () => setAuthMode(null);
+  const closeAuth = () => { setAuthMode(null); setAuthMessage(''); };
+
+  const handleAuth = async (event) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const email = form.get('email');
+    const password = form.get('password');
+    const username = form.get('username');
+
+    setAuthLoading(true);
+    setAuthMessage('');
+
+    try {
+      const endpoint = authMode === 'signup' ? '/auth/v1/signup' : '/auth/v1/token?grant_type=password';
+      const payload = authMode === 'signup'
+        ? { email, password, data: { username } }
+        : { email, password };
+
+      const response = await fetch(SUPABASE_URL + endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_KEY,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.msg || data?.message || 'Une erreur est survenue.');
+
+      if (authMode === 'signup') {
+        setAuthMessage('Compte créé avec succès ! Vérifie ton e-mail si une confirmation est demandée.');
+      } else {
+        setAuthMessage('Connexion réussie ! Ton espace joueur sera bientôt disponible.');
+      }
+    } catch (error) {
+      setAuthMessage(error.message || 'Impossible de continuer.');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
 
   return (
     <main className="site">
@@ -103,12 +148,13 @@ export default function Home() {
                 <span className="authTag">ESPACE JOUEUR</span>
                 <h1>Bon retour parmi les secours.</h1>
                 <p className="authIntro">Connectez-vous pour retrouver votre SDIS et votre progression.</p>
-                <form onSubmit={(e) => e.preventDefault()}>
+                <form onSubmit={handleAuth}>
                   <label>Adresse e-mail</label>
-                  <input type="email" placeholder="vous@exemple.fr" required />
+                  <input name="email" type="email" placeholder="vous@exemple.fr" required />
                   <label>Mot de passe</label>
-                  <input type="password" placeholder="••••••••" required />
-                  <button className="authSubmit" type="submit">SE CONNECTER →</button>
+                  <input name="password" type="password" placeholder="••••••••" required />
+                  <button className="authSubmit" type="submit" disabled={authLoading}>{authLoading ? "CONNEXION..." : "SE CONNECTER →"}</button>
+                {authMessage && <p className="authMessage">{authMessage}</p>}
                 </form>
                 <p className="authSwitch">Pas encore de compte ? <button type="button" onClick={() => setAuthMode('signup')}>Créer un compte</button></p>
               </>
@@ -117,14 +163,15 @@ export default function Home() {
                 <span className="authTag">REJOINDRE CTA 18</span>
                 <h1>Prêt à prendre le commandement ?</h1>
                 <p className="authIntro">Créez votre compte joueur et préparez-vous à gérer votre premier SDIS.</p>
-                <form onSubmit={(e) => e.preventDefault()}>
+                <form onSubmit={handleAuth}>
                   <label>Pseudo</label>
-                  <input type="text" placeholder="Votre pseudo" required />
+                  <input name="username" type="text" placeholder="Votre pseudo" required />
                   <label>Adresse e-mail</label>
-                  <input type="email" placeholder="vous@exemple.fr" required />
+                  <input name="email" type="email" placeholder="vous@exemple.fr" required />
                   <label>Mot de passe</label>
-                  <input type="password" placeholder="Minimum 6 caractères" minLength="6" required />
-                  <button className="authSubmit" type="submit">CRÉER MON COMPTE →</button>
+                  <input name="password" type="password" placeholder="Minimum 6 caractères" minLength="6" required />
+                  <button className="authSubmit" type="submit" disabled={authLoading}>{authLoading ? "CRÉATION..." : "CRÉER MON COMPTE →"}</button>
+                {authMessage && <p className="authMessage">{authMessage}</p>}
                 </form>
                 <p className="authSwitch">Déjà inscrit ? <button type="button" onClick={() => setAuthMode('login')}>Se connecter</button></p>
               </>
