@@ -10,45 +10,56 @@ const CACHE_TTL = 1000 * 60 * 30;
 const stationCache = new Map();
 const pendingQueries = new Map();
 
-function buildQuery(code) {
+function buildQueries(code) {
   if (code === 'BSPP') {
-    return '[out:json][timeout:60];nwr["amenity"="fire_station"](48.30,1.85,49.10,3.05);out center tags;';
+    return [
+      '[out:json][timeout:25];nwr["amenity"="fire_station"](48.30,1.85,49.10,3.05);out center tags;',
+    ];
   }
 
   if (code === 'BMPM') {
-    return '[out:json][timeout:60];nwr["amenity"="fire_station"](43.05,5.15,43.55,5.75);out center tags;';
+    return [
+      '[out:json][timeout:25];nwr["amenity"="fire_station"](43.05,5.15,43.55,5.75);out center tags;',
+    ];
   }
 
-  return '[out:json][timeout:90];area["boundary"="administrative"]["admin_level"="6"]["ref:INSEE"="' + code + '"]->.searchArea;nwr["amenity"="fire_station"](area.searchArea);out center tags;';
+  const iso = 'FR-' + code;
+  // Plusieurs clés OSM sont utilisées selon le département. Les relations
+  // administratives françaises ne sont pas toutes renseignées de façon identique.
+  return [
+    '[out:json][timeout:25];area["boundary"="administrative"]["admin_level"="6"]["ref:INSEE"="' + code + '"]->.searchArea;nwr["amenity"="fire_station"](area.searchArea);out center tags;',
+    '[out:json][timeout:25];area["boundary"="administrative"]["admin_level"="6"]["ISO3166-2"="' + iso + '"]->.searchArea;nwr["amenity"="fire_station"](area.searchArea);out center tags;',
+    '[out:json][timeout:25];rel["boundary"="administrative"]["admin_level"="6"]["ref:INSEE"="' + code + '"];map_to_area->.searchArea;nwr["amenity"="fire_station"](area.searchArea);out center tags;',
+  ];
 }
 
 async function queryOverpass(query) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 18000);
+  let lastError;
 
-  try {
-    const attempts = OVERPASS_ENDPOINTS.map(async (endpoint) => {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'text/plain;charset=UTF-8',
-          'User-Agent': 'CTA-18/1.0',
-        },
-        body: query,
+  // Essais séquentiels : un endpoint qui échoue ne bloque pas les autres.
+  for (const endpoint of OVERPASS_ENDPOINTS) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 12000);
+
+    try {
+      const url = endpoint + '?data=' + encodeURIComponent(query);
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
         cache: 'no-store',
         signal: controller.signal,
       });
-
       if (!response.ok) throw new Error('Service cartographique indisponible (' + response.status + ')');
-      return response.json();
-    });
-
-    const data = await Promise.any(attempts);
-    controller.abort();
-    return data;
-  } finally {
-    clearTimeout(timeout);
+      const data = await response.json();
+      if (Array.isArray(data?.elements)) return data;
+    } catch (error) {
+      lastError = error;
+    } finally {
+      clearTimeout(timeout);
+    }
   }
+
+  throw lastError || new Error('Aucun service cartographique disponible');
 }
 
 function cleanText(value) {
@@ -153,8 +164,20 @@ export async function GET(request) {
 
   if (!pendingQueries.has(code)) {
     const pending = (async () => {
-      const data = await queryOverpass(buildQuery(code));
-      const stations = normalizeStations(data.elements);
+      let stations = [];
+      const queries = buildQueries(code);
+
+      for (const query of queries) {
+        try {
+          const data = await queryOverpass(query);
+          stations = normalizeStations(data.elements);
+          if (stations.length) break;
+        } catch {
+          // On essaie la variante suivante de la relation départementale.
+        }
+      }
+
+      if (!stations.length) throw new Error('Aucun CIS trouvé pour ce territoire.');
       stationCache.set(code, { stations, createdAt: Date.now() });
       return stations;
     })().finally(() => pendingQueries.delete(code));
