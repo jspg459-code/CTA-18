@@ -313,6 +313,8 @@ export default function Home() {
                 <div className="mapToolGroup">
                   <button className={ctaView === 'map' ? 'active' : ''} type="button" onClick={() => setCtaView('map')}>Cartographie</button>
                   <button className={ctaView === 'operations' ? 'active' : ''} type="button" onClick={() => setCtaView('operations')}>Synoptique des opérations</button>
+                  <button className={ctaView === 'activeInterventions' ? 'active' : ''} type="button" onClick={() => setCtaView('activeInterventions')}>Interventions en cours <span className="menuCounter">0</span></button>
+                  <button className={ctaView === 'reinforcements' ? 'active' : ''} type="button" onClick={() => setCtaView('reinforcements')}>Demande de renfort <span className="menuCounter">0</span></button>
                   <button className={ctaView === 'resources' ? 'active' : ''} type="button" onClick={() => setCtaView('resources')}>Synoptique des moyens</button>
                   <button className={ctaView === 'chat' ? 'active' : ''} type="button" onClick={() => setCtaView('chat')}>Chat</button>
                   <button className={ctaView === 'tickets' ? 'active' : ''} type="button" onClick={() => setCtaView('tickets')}>Billets</button>
@@ -348,6 +350,24 @@ export default function Home() {
                     <div><b>–</b><span>TEMPS MOYEN</span></div>
                   </div>
                   <div className="synopticEmptyState"><span>🚨</span><h3>Aucune opération active</h3><p>Le tableau se remplira automatiquement dès qu'un appel sera traité.</p></div>
+                </div> : ctaView === 'activeInterventions' ? <div className="synopticScreen activeInterventionsScreen">
+                  <div className="synopticScreenHead"><span className="authTag">INTERVENTIONS EN COURS</span><h2>Suivi opérationnel en temps réel</h2><p>Toutes les interventions actives du territoire apparaîtront ici avec leur localisation, leur priorité et les moyens engagés.</p></div>
+                  <div className="synopticMetricGrid">
+                    <div><b>0</b><span>INTERVENTIONS ACTIVES</span></div>
+                    <div><b>0</b><span>ENGINS ENGAGÉS</span></div>
+                    <div><b>0</b><span>PERSONNELS ENGAGÉS</span></div>
+                    <div><b>–</b><span>PRIORITÉ MAXIMALE</span></div>
+                  </div>
+                  <div className="synopticEmptyState"><span>🚨</span><h3>Aucune intervention en cours</h3><p>Dès qu'un appel sera traité et qu'une intervention sera créée, elle apparaîtra automatiquement dans cette liste.</p></div>
+                </div> : ctaView === 'reinforcements' ? <div className="synopticScreen reinforcementScreen">
+                  <div className="synopticScreenHead"><span className="authTag">DEMANDES DE RENFORT</span><h2>Coordination des renforts</h2><p>Les demandes de moyens supplémentaires provenant des interventions et des CIS seront centralisées ici.</p></div>
+                  <div className="synopticMetricGrid resources">
+                    <div><b>0</b><span>DEMANDES EN ATTENTE</span></div>
+                    <div><b>0</b><span>RENFORTS ACCEPTÉS</span></div>
+                    <div><b>{operationalStations.length}</b><span>CIS MOBILISABLES</span></div>
+                    <div><b>{Object.values(fleetTotals).reduce((sum, value) => sum + value, 0)}</b><span>ENGINS DISPONIBLES</span></div>
+                  </div>
+                  <div className="synopticEmptyState"><span>🆘</span><h3>Aucune demande de renfort</h3><p>Lorsqu'une intervention nécessitera des moyens supplémentaires, la demande apparaîtra ici pour validation et engagement.</p></div>
                 </div> : ctaView === 'resources' ? <div className="synopticScreen">
                   <div className="synopticScreenHead"><span className="authTag">SYNOPTIQUE DES MOYENS</span><h2>Disponibilité opérationnelle</h2><p>Vue en temps réel des CIS, engins et personnels disponibles.</p></div>
                   <div className="synopticMetricGrid resources">
