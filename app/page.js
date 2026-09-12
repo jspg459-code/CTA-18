@@ -66,8 +66,17 @@ export default function Home() {
             <span>CTA <b>18</b></span>
           </a>
           <div className="account">
-            <button type="button" onClick={() => setAuthMode('login')}>Connexion</button>
-            <button type="button" className="signup" onClick={() => setAuthMode('signup')}>Inscription</button>
+            {player ? (
+              <>
+                <span className="playerName">👤 {player.user_metadata?.username || player.email?.split('@')[0]}</span>
+                <button type="button" className="logout" onClick={logout}>Déconnexion</button>
+              </>
+            ) : (
+              <>
+                <button type="button" onClick={() => setAuthMode('login')}>Connexion</button>
+                <button type="button" className="signup" onClick={() => setAuthMode('signup')}>Inscription</button>
+              </>
+            )}
           </div>
         </div>
       </header>
