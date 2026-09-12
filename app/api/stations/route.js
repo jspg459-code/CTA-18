@@ -73,8 +73,8 @@ function normalizeStations(elements) {
   return (elements || [])
     .map((element) => {
       const tags = element.tags || {};
-      const lat = element.lat ?? element.center?.lat;
-      const lon = element.lon ?? element.center?.lon;
+      const lat = Number(element.lat ?? element.center?.lat);
+      const lon = Number(element.lon ?? element.center?.lon);
 
       const locality = cleanText(
         tags['addr:city'] ||
@@ -129,7 +129,7 @@ function normalizeStations(elements) {
         type: tags['fire_station:type:FR'] || 'CIS',
       };
     })
-    .filter((station) => Number.isFinite(station.lat) && Number.isFinite(station.lon))
+    .filter((station) => Number.isFinite(Number(station.lat)) && Number.isFinite(Number(station.lon)))
     .filter((station) => {
       const key = station.lat.toFixed(5) + ',' + station.lon.toFixed(5);
       if (seen.has(key)) return false;
@@ -159,7 +159,14 @@ export async function GET(request) {
   if (!pendingQueries.has(code)) {
     const pending = (async () => {
       const data = await queryOverpass(buildQuery(code));
-      const stations = normalizeStations(data.elements);
+      let stations = normalizeStations(data.elements);
+      // Certains miroirs renvoient parfois une réponse valide mais vide : on retente
+      // immédiatement avec un autre endpoint avant de considérer le département vide.
+      if (!stations.length) {
+        const retry = await queryOverpass(buildQuery(code));
+        stations = normalizeStations(retry.elements);
+      }
+      if (!stations.length) throw new Error('Aucun centre trouvé');
       stationCache.set(code, { stations, createdAt: Date.now() });
       return stations;
     })().finally(() => pendingQueries.delete(code));
