@@ -9,8 +9,10 @@ export default function Home() {
   const [authMode, setAuthMode] = useState(null);
   const [authMessage, setAuthMessage] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
+  const [player, setPlayer] = useState(null);
 
   const closeAuth = () => { setAuthMode(null); setAuthMessage(''); };
+  const logout = () => { setPlayer(null); setAuthMode(null); setAuthMessage(''); };
 
   const handleAuth = async (event) => {
     event.preventDefault();
@@ -43,7 +45,9 @@ export default function Home() {
       if (authMode === 'signup') {
         setAuthMessage('Compte créé avec succès ! Vérifie ton e-mail si une confirmation est demandée.');
       } else {
-        setAuthMessage('Connexion réussie ! Ton espace joueur sera bientôt disponible.');
+        setPlayer(data.user);
+        setAuthMode(null);
+        setAuthMessage('');
       }
     } catch (error) {
       setAuthMessage(error.message || 'Impossible de continuer.');
@@ -67,7 +71,9 @@ export default function Home() {
         </div>
       </header>
 
-      {!authMode ? (
+      {player ? (
+        <section className="dashboardPage"><div className="wrap dashboardWrap"><div className="dashboardWelcome"><span className="authTag">CENTRE DE COMMANDEMENT</span><h1>Bienvenue, <span>{player.user_metadata?.username || player.email?.split('@')[0]}</span> 👋</h1><p>Votre compte est prêt. Il est maintenant temps de choisir le territoire que vous allez commander.</p></div><div className="dashboardGrid"><article className="gameCard primaryGameCard"><div className="gameIcon">🇫🇷</div><span className="cardLabel">NOUVELLE PARTIE</span><h2>Choisissez votre SDIS</h2><p>Sélectionnez un département français et prenez le commandement de son service départemental d'incendie et de secours.</p><button className="startGame" type="button">CHOISIR MON SDIS →</button></article><div className="dashboardSide"><article className="miniCard"><span>🚒</span><div><b>Aucune partie active</b><p>Votre première partie vous attend.</p></div></article><article className="miniCard"><span>📍</span><div><b>Carte opérationnelle</b><p>Disponible une fois votre SDIS sélectionné.</p></div></article><article className="miniCard"><span>🚨</span><div><b>Centre d'alerte</b><p>Prêt à recevoir vos premières interventions.</p></div></article></div></div></div></section>
+      ) : !authMode ? (
         <>
           <section className="hero" id="home">
             <div className="wrap heroGrid">
