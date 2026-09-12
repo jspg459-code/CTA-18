@@ -76,27 +76,6 @@ export default function Home() {
 
       <section className="operation" id="discover">
         <div className="wrap operationGrid">
-          <div className="operationPanel">
-            <div className="panelHeader">
-              <div><span className="alarm">🚨</span> NOUVELLE ALERTE</div>
-              <b>PRIORITÉ 1</b>
-            </div>
-            <div className="alertBody">
-              <span className="alertIcon">🔥</span>
-              <div>
-                <small>INCENDIE</small>
-                <h3>Feu d'habitation</h3>
-                <p>Départ immédiat demandé · 14:32</p>
-              </div>
-            </div>
-            <div className="alertRoute">
-              <div><span className="statusDot"></span> CIS de départ</div>
-              <div className="routeLine"></div>
-              <div className="movingTruck">🚒</div>
-              <div className="routeLine active"></div>
-              <div>🔥 Intervention</div>
-            </div>
-          </div>
           <div className="operationCopy">
             <span>LE JEU COMMENCE ICI</span>
             <h2>Préparez-vous à prendre le commandement.</h2>
