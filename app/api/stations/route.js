@@ -51,6 +51,17 @@ async function queryOverpass(query) {
   }
 }
 
+function cleanText(value) {
+  return String(value || '').trim().replace(/\s+/g, ' ');
+}
+
+function isGenericStationName(name) {
+  const normalized = cleanText(name).toLowerCase();
+  return !normalized ||
+    /^(caserne|caserne de pompiers|pompiers|fire station|centre de secours|centre d'incendie et de secours|cis)$/i.test(normalized) ||
+    /^(centre de secours|caserne de pompiers)\s*[-–—]?$/i.test(normalized);
+}
+
 function normalizeStations(elements) {
   const seen = new Set();
 
@@ -60,27 +71,54 @@ function normalizeStations(elements) {
       const lat = element.lat ?? element.center?.lat;
       const lon = element.lon ?? element.center?.lon;
 
-      const address =
-        tags['addr:full'] ||
-        [
-          tags['addr:housenumber'],
-          tags['addr:street'],
-          tags['addr:postcode'],
-          tags['addr:city'],
-        ]
-          .filter(Boolean)
-          .join(', ');
+      const locality = cleanText(
+        tags['addr:city'] ||
+        tags['addr:place'] ||
+        tags['is_in:city'] ||
+        tags['is_in'] ||
+        tags['addr:suburb'] ||
+        tags['addr:district'] ||
+        tags.municipality ||
+        tags.commune
+      );
+
+      const streetAddress = [
+        tags['addr:housenumber'],
+        tags['addr:street'],
+      ].filter(Boolean).join(' ');
+
+      const addressParts = [
+        tags['addr:full'],
+        streetAddress,
+        [tags['addr:postcode'], locality].filter(Boolean).join(' '),
+      ].filter(Boolean);
+
+      const address = addressParts.length
+        ? [...new Set(addressParts)].join(', ')
+        : '';
+
+      const rawName = cleanText(
+        tags.name ||
+        tags.short_name ||
+        tags.ref ||
+        tags['ref:FR:SDIS']
+      );
+
+      let name = rawName;
+      if (isGenericStationName(rawName)) {
+        if (locality) name = 'Centre de secours — ' + locality;
+        else if (streetAddress) name = 'Centre de secours — ' + streetAddress;
+        else if (tags['addr:postcode']) name = 'Centre de secours — ' + tags['addr:postcode'];
+        else name = 'Centre de secours (commune à préciser)';
+      }
 
       return {
         id: element.type + '-' + element.id,
         lat,
         lon,
-        name:
-          tags.name ||
-          tags.short_name ||
-          tags.ref ||
-          tags['ref:FR:SDIS'] ||
-          'Centre d’incendie et de secours',
+        name,
+        rawName,
+        locality,
         address,
         ref: tags.ref || tags['ref:FR:SDIS'] || '',
         type: tags['fire_station:type:FR'] || 'CIS',
