@@ -1,89 +1,137 @@
 'use client';
 
+import { useState } from 'react';
+
 export default function Home() {
+  const [authMode, setAuthMode] = useState(null);
+
+  const closeAuth = () => setAuthMode(null);
+
   return (
     <main className="site">
       <header className="top">
         <div className="wrap navWrap">
-          <a className="brand" href="#home">
+          <a className="brand" href="#home" onClick={closeAuth}>
             <span className="shield">18</span>
             <span>CTA <b>18</b></span>
           </a>
           <div className="account">
-            <button>Connexion</button>
-            <a className="signup" href="#discover">Inscription</a>
+            <button type="button" onClick={() => setAuthMode('login')}>Connexion</button>
+            <button type="button" className="signup" onClick={() => setAuthMode('signup')}>Inscription</button>
           </div>
         </div>
       </header>
 
-      <section className="hero" id="home">
-        <div className="wrap heroGrid">
-          <div className="heroCopy">
-            <span className="tag">🚨 SIMULATION OPÉRATIONNELLE</span>
-            <h1>Gérez les secours.<br /><span>À l'échelle d'un SDIS.</span></h1>
-            <p>
-              Prenez le contrôle d'un service départemental d'incendie et de secours,
-              coordonnez les centres, engagez vos véhicules et préparez-vous à répondre aux alertes.
-            </p>
-            <div className="welcomeButtons">
-              <a className="play" href="#discover">▶️ COMMENCER À JOUER</a>
-              <a className="how" href="#concept">Comment ça fonctionne ?</a>
+      {!authMode ? (
+        <>
+          <section className="hero" id="home">
+            <div className="wrap heroGrid">
+              <div className="heroCopy">
+                <span className="tag">🚨 SIMULATION OPÉRATIONNELLE</span>
+                <h1>Gérez les secours.<br /><span>À l'échelle d'un SDIS.</span></h1>
+                <p>
+                  Prenez le contrôle d'un service départemental d'incendie et de secours,
+                  coordonnez les centres, engagez vos véhicules et préparez-vous à répondre aux alertes.
+                </p>
+                <div className="welcomeButtons">
+                  <a className="play" href="#discover">▶️ COMMENCER À JOUER</a>
+                  <a className="how" href="#concept">Comment ça fonctionne ?</a>
+                </div>
+                <div className="heroStats">
+                  <div><b>🇫🇷</b><span>SDIS français</span></div>
+                  <div><b>🚒</b><span>Centres réels</span></div>
+                  <div><b>📍</b><span>Carte en partie</span></div>
+                </div>
+              </div>
             </div>
-            <div className="heroStats">
-              <div><b>🇫🇷</b><span>SDIS français</span></div>
-              <div><b>🚒</b><span>Centres réels</span></div>
-              <div><b>📍</b><span>Carte en partie</span></div>
+          </section>
+
+          <section className="concept" id="concept">
+            <div className="wrap">
+              <div className="sectionIntro">
+                <span>LE CONCEPT CTA 18</span>
+                <h2>Vous ne gérez pas une caserne.<br />Vous gérez <em>tout un territoire.</em></h2>
+                <p>Choisissez un SDIS français et prenez les décisions opérationnelles pour l'ensemble du département.</p>
+              </div>
+              <div className="conceptGrid">
+                <article className="conceptCard">
+                  <div className="cardNumber">01</div>
+                  <div className="conceptIcon">🇫🇷</div>
+                  <h3>Choisissez votre SDIS</h3>
+                  <p>Jouez sur un département français et pilotez son organisation opérationnelle.</p>
+                </article>
+                <article className="conceptCard">
+                  <div className="cardNumber">02</div>
+                  <div className="conceptIcon">🏢</div>
+                  <h3>Commandez les centres</h3>
+                  <p>Gérez les effectifs, les engins et la disponibilité des centres réels.</p>
+                </article>
+                <article className="conceptCard">
+                  <div className="cardNumber">03</div>
+                  <div className="conceptIcon">🚨</div>
+                  <h3>Engagez les secours</h3>
+                  <p>Recevez les alertes et choisissez les moyens adaptés à chaque intervention.</p>
+                </article>
+                <article className="conceptCard accent">
+                  <div className="cardNumber">04</div>
+                  <div className="conceptIcon">🗺️</div>
+                  <h3>Suivez les véhicules</h3>
+                  <p>Une vraie carte opérationnelle sera disponible une fois votre partie lancée.</p>
+                </article>
+              </div>
             </div>
-          </div>
-        </div>
-      </section>
+          </section>
 
-      <section className="concept" id="concept">
-        <div className="wrap">
-          <div className="sectionIntro">
-            <span>LE CONCEPT CTA 18</span>
-            <h2>Vous ne gérez pas une caserne.<br />Vous gérez <em>tout un territoire.</em></h2>
-            <p>Choisissez un SDIS français et prenez les décisions opérationnelles pour l'ensemble du département.</p>
-          </div>
-          <div className="conceptGrid">
-            <article className="conceptCard">
-              <div className="cardNumber">01</div>
-              <div className="conceptIcon">🇫🇷</div>
-              <h3>Choisissez votre SDIS</h3>
-              <p>Jouez sur un département français et pilotez son organisation opérationnelle.</p>
-            </article>
-            <article className="conceptCard">
-              <div className="cardNumber">02</div>
-              <div className="conceptIcon">🏢</div>
-              <h3>Commandez les centres</h3>
-              <p>Gérez les effectifs, les engins et la disponibilité des centres réels.</p>
-            </article>
-            <article className="conceptCard">
-              <div className="cardNumber">03</div>
-              <div className="conceptIcon">🚨</div>
-              <h3>Engagez les secours</h3>
-              <p>Recevez les alertes et choisissez les moyens adaptés à chaque intervention.</p>
-            </article>
-            <article className="conceptCard accent">
-              <div className="cardNumber">04</div>
-              <div className="conceptIcon">🗺️</div>
-              <h3>Suivez les véhicules</h3>
-              <p>Une vraie carte opérationnelle sera disponible une fois votre partie lancée.</p>
-            </article>
-          </div>
-        </div>
-      </section>
+          <section className="operation" id="discover">
+            <div className="wrap operationGrid">
+              <div className="operationCopy">
+                <span>LE JEU COMMENCE ICI</span>
+                <h2>Préparez-vous à prendre le commandement.</h2>
+                <p>Créez votre partie, choisissez votre SDIS et entrez dans votre centre de commandement.</p>
+              </div>
+            </div>
+          </section>
+        </>
+      ) : (
+        <section className="authPage">
+          <div className="authCard">
+            <button className="authBack" type="button" onClick={closeAuth}>← Retour à l'accueil</button>
+            <div className="authLogo"><span className="shield">18</span><b>CTA 18</b></div>
 
-      <section className="operation" id="discover">
-        <div className="wrap operationGrid">
-          <div className="operationCopy">
-            <span>LE JEU COMMENCE ICI</span>
-            <h2>Préparez-vous à prendre le commandement.</h2>
-            <p>Créez votre partie, choisissez votre SDIS et entrez dans votre centre de commandement.</p>
-            <a className="textLink" href="#home">Découvrir CTA 18 →</a>
+            {authMode === 'login' ? (
+              <>
+                <span className="authTag">ESPACE JOUEUR</span>
+                <h1>Bon retour parmi les secours.</h1>
+                <p className="authIntro">Connectez-vous pour retrouver votre SDIS et votre progression.</p>
+                <form onSubmit={(e) => e.preventDefault()}>
+                  <label>Adresse e-mail</label>
+                  <input type="email" placeholder="vous@exemple.fr" required />
+                  <label>Mot de passe</label>
+                  <input type="password" placeholder="••••••••" required />
+                  <button className="authSubmit" type="submit">SE CONNECTER →</button>
+                </form>
+                <p className="authSwitch">Pas encore de compte ? <button type="button" onClick={() => setAuthMode('signup')}>Créer un compte</button></p>
+              </>
+            ) : (
+              <>
+                <span className="authTag">REJOINDRE CTA 18</span>
+                <h1>Prêt à prendre le commandement ?</h1>
+                <p className="authIntro">Créez votre compte joueur et préparez-vous à gérer votre premier SDIS.</p>
+                <form onSubmit={(e) => e.preventDefault()}>
+                  <label>Pseudo</label>
+                  <input type="text" placeholder="Votre pseudo" required />
+                  <label>Adresse e-mail</label>
+                  <input type="email" placeholder="vous@exemple.fr" required />
+                  <label>Mot de passe</label>
+                  <input type="password" placeholder="Minimum 6 caractères" minLength="6" required />
+                  <button className="authSubmit" type="submit">CRÉER MON COMPTE →</button>
+                </form>
+                <p className="authSwitch">Déjà inscrit ? <button type="button" onClick={() => setAuthMode('login')}>Se connecter</button></p>
+              </>
+            )}
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       <footer>
         <div className="wrap footerWrap">
