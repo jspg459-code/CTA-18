@@ -211,3 +211,12 @@ footer{background:#171c23;color:#a8b0b8}.footerWrap{padding:28px 0;display:flex;
 @media(max-width:600px){
   .cisMarker{width:22px;height:22px;font-size:12px;border-width:2px;}
 }
+
+
+/* Menus opérationnels supplémentaires */
+.menuCounter{display:inline-grid;place-items:center;min-width:15px;height:15px;padding:0 4px;margin-left:4px;border-radius:999px;background:#df3b36;color:#fff;font-size:7px;font-weight:800;vertical-align:middle}
+.commandMapToolbar button.active .menuCounter{background:#f05a55}
+.activeInterventionsScreen .synopticEmptyState>span{filter:drop-shadow(0 8px 14px rgba(220,60,55,.22))}
+.reinforcementScreen .synopticEmptyState{border-color:rgba(35,130,170,.22)}
+.reinforcementScreen .synopticEmptyState>span{filter:drop-shadow(0 8px 14px rgba(42,120,190,.18))}
+@media(max-width:600px){.mapToolGroup button:nth-child(n+4){display:inline-flex}.mapToolGroup{max-height:38px;overflow-x:auto;overflow-y:hidden;flex-wrap:nowrap;padding-right:4px}.mapToolGroup button{white-space:nowrap}.menuCounter{min-width:13px;height:13px;font-size:6px}}
