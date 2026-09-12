@@ -1,12 +1,16 @@
 import { NextResponse } from 'next/server';
 
+export const runtime = 'nodejs';
+
 const OVERPASS_ENDPOINTS = [
   'https://overpass-api.de/api/interpreter',
   'https://overpass.kumi.systems/api/interpreter',
   'https://overpass.nchc.org.tw/api/interpreter',
 ];
 
-const CACHE_TTL = 1000 * 60 * 30;
+// Cache mémoire longue durée + cache CDN : une même recherche ne doit jamais relancer Overpass inutilement.
+const CACHE_TTL = 1000 * 60 * 60 * 24;
+const CDN_CACHE = 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800';
 const stationCache = new Map();
 const pendingQueries = new Map();
 
@@ -24,7 +28,8 @@ function buildQuery(code) {
 
 async function queryOverpass(query) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 18000);
+  // On privilégie une réponse rapide : les 3 miroirs sont interrogés en parallèle.
+  const timeout = setTimeout(() => controller.abort(), 12000);
 
   try {
     const attempts = OVERPASS_ENDPOINTS.map(async (endpoint) => {
@@ -147,7 +152,7 @@ export async function GET(request) {
   if (cached && now - cached.createdAt < CACHE_TTL) {
     return NextResponse.json(
       { stations: cached.stations, source: 'OpenStreetMap / Overpass', cached: true },
-      { headers: { 'Cache-Control': 'public, max-age=300, s-maxage=1800, stale-while-revalidate=86400' } }
+      { headers: { 'Cache-Control': CDN_CACHE } }
     );
   }
 
@@ -166,7 +171,7 @@ export async function GET(request) {
     const stations = await pendingQueries.get(code);
     return NextResponse.json(
       { stations, source: 'OpenStreetMap / Overpass', cached: false },
-      { headers: { 'Cache-Control': 'public, max-age=300, s-maxage=1800, stale-while-revalidate=86400' } }
+      { headers: { 'Cache-Control': CDN_CACHE } }
     );
   } catch {
     return NextResponse.json(
