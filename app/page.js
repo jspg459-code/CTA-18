@@ -119,6 +119,32 @@ const specialServices = [
   { code: 'BMPM', name: 'Bataillon de marins-pompiers de Marseille', area: 'Marseille', icon: '⚓' },
 ];
 
+const vehicleCatalog = {
+  VSAV: 'Véhicule de secours et d’assistance aux victimes',
+  FPT: 'Fourgon pompe-tonne',
+  CCF: 'Camion-citerne feux de forêts',
+  EPA: 'Échelle pivotante automatique',
+  VSR: 'Véhicule de secours routier',
+  VL: 'Véhicule léger de commandement',
+};
+
+// Base de départ CTA 18 : elle est remplacée au fur et à mesure par des données
+// publiques vérifiées lorsqu'une flotte réelle est documentée.
+const buildOperationalProfile = (station, index) => {
+  const seed = Array.from(String(station.id || station.name || index)).reduce((n, ch) => n + ch.charCodeAt(0), 0);
+  const profile = [{ type: 'VSAV', count: 1 }, { type: 'FPT', count: 1 }];
+  if (seed % 3 === 0) profile.push({ type: 'CCF', count: 1 });
+  if (seed % 5 === 0) profile.push({ type: 'VSR', count: 1 });
+  if (seed % 7 === 0) profile.push({ type: 'EPA', count: 1 });
+  profile.push({ type: 'VL', count: 1 });
+  return {
+    ...station,
+    fleet: profile,
+    personnel: 8 + (seed % 18),
+    source: 'Base CTA 18',
+  };
+};
+
 export default function Home() {
   const [authMode, setAuthMode] = useState(null);
   const [authMessage, setAuthMessage] = useState('');
@@ -129,6 +155,7 @@ export default function Home() {
   const [search, setSearch] = useState('');
   const [stations, setStations] = useState([]);
   const [stationsLoading, setStationsLoading] = useState(false);
+  const [selectedStation, setSelectedStation] = useState(null);
 
   const closeAuth = () => { setAuthMode(null); setAuthMessage(''); };
   const logout = () => { setPlayer(null); setAuthMode(null); setAuthMessage(''); setServicePicker(false); setSelectedService(null); setSearch(''); };
@@ -191,6 +218,16 @@ export default function Home() {
     return () => { cancelled = true; };
   }, [selectedService]);
 
+  const operationalStations = useMemo(() => stations.map(buildOperationalProfile), [stations]);
+  const fleetTotals = useMemo(() => {
+    const totals = {};
+    operationalStations.forEach((station) => station.fleet.forEach((vehicle) => {
+      totals[vehicle.type] = (totals[vehicle.type] || 0) + vehicle.count;
+    }));
+    return totals;
+  }, [operationalStations]);
+  const personnelTotal = useMemo(() => operationalStations.reduce((sum, station) => sum + station.personnel, 0), [operationalStations]);
+
   const playerName = player?.user_metadata?.username || player?.email?.split('@')[0];
 
   return (
@@ -217,8 +254,8 @@ export default function Home() {
             <div className="commandStatsGrid">
               <article><span className="statIcon alert">🚨</span><div><b>0</b><small>ALERTE ACTIVE</small></div></article>
               <article><span className="statIcon">🏢</span><div><b>{stationsLoading ? '…' : stations.length}</b><small>CIS RÉFÉRENCÉS</small></div></article>
-              <article><span className="statIcon">🚒</span><div><b>0</b><small>ENGINS ENGAGÉS</small></div></article>
-              <article><span className="statIcon">👨‍🚒</span><div><b>0</b><small>ÉQUIPAGES MOBILISÉS</small></div></article>
+              <article><span className="statIcon">🚒</span><div><b>{Object.values(fleetTotals).reduce((sum, value) => sum + value, 0)}</b><small>ENGINS EN BASE</small></div></article>
+              <article><span className="statIcon">👨‍🚒</span><div><b>{personnelTotal}</b><small>PERSONNELS EN BASE</small></div></article>
             </div>
 
             <div className="commandBoard">
@@ -246,13 +283,25 @@ export default function Home() {
             </div>
 
             <section className="fleetSection">
-              <div className="sectionBar"><div><span className="authTag">MOYENS OPÉRATIONNELS</span><h2>Flotte du territoire</h2></div><button type="button">VOIR TOUS LES ENGINS →</button></div>
+              <div className="sectionBar"><div><span className="authTag">MOYENS OPÉRATIONNELS</span><h2>Flotte de départ du territoire</h2></div><button type="button" onClick={() => setSelectedStation(null)}>VUE GLOBALE</button></div>
+              <p className="fleetNotice">Les données publiques vérifiées seront intégrées progressivement. Les CIS sans flotte publique détaillée utilisent actuellement la base opérationnelle CTA 18, modifiable plus tard par les achats du joueur.</p>
               <div className="fleetGrid">
-                <article className="vehicleCard"><span>🚒</span><div><b>FPT</b><small>Fourgon pompe-tonne</small></div><em>● DISPONIBLE</em></article>
-                <article className="vehicleCard"><span>🚑</span><div><b>VSAV</b><small>Secours à personne</small></div><em>● DISPONIBLE</em></article>
-                <article className="vehicleCard"><span>🚒</span><div><b>EPA</b><small>Échelle aérienne</small></div><em>● DISPONIBLE</em></article>
-                <article className="vehicleCard"><span>🚙</span><div><b>VLCG</b><small>Commandement</small></div><em>● DISPONIBLE</em></article>
+                {Object.entries(fleetTotals).map(([type, count]) => <article className="vehicleCard" key={type}><span>{type === 'VSAV' ? '🚑' : type === 'VL' ? '🚙' : '🚒'}</span><div><b>{type} × {count}</b><small>{vehicleCatalog[type]}</small></div><em>BASE OPÉRATIONNELLE</em></article>)}
               </div>
+            </section>
+
+            <section className="fleetSection">
+              <div className="sectionBar"><div><span className="authTag">CENTRES DU TERRITOIRE</span><h2>CIS et moyens affectés</h2></div><button type="button">CLIQUER SUR UN CIS →</button></div>
+              <div className="stationOperationsGrid">
+                {operationalStations.map((station, index) => <button className="stationOperationCard" type="button" key={station.id || station.name || index} onClick={() => setSelectedStation(station)}>
+                  <span className="stationNumber">{index + 1}</span><div><b>{station.name}</b><small>👨‍🚒 {station.personnel} personnels • 🚒 {station.fleet.reduce((sum, v) => sum + v.count, 0)} engins</small></div><strong>→</strong>
+                </button>)}
+                {!stationsLoading && !operationalStations.length && <p>Aucun CIS chargé pour le moment.</p>}
+              </div>
+              {selectedStation && <div className="stationDetail">
+                <div><span className="authTag">{selectedStation.source}</span><h3>{selectedStation.name}</h3><p>{selectedStation.address || selectedService.area}</p><b>👨‍🚒 Personnel de départ : {selectedStation.personnel}</b></div>
+                <div className="stationFleetList">{selectedStation.fleet.map((vehicle) => <div key={vehicle.type}><strong>{vehicle.type} × {vehicle.count}</strong><span>{vehicleCatalog[vehicle.type]}</span></div>)}</div>
+              </div>}
             </section>
 
             <section className="commandActivity">
