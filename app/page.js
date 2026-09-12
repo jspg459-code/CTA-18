@@ -1,6 +1,116 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
+
+const LEAFLET_CSS = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+const LEAFLET_JS = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+
 export default function Home() {
+  const mapRef = useRef(null);
+  const leafletMap = useRef(null);
+
+  useEffect(() => {
+    if (!mapRef.current || leafletMap.current) return;
+
+    const loadLeaflet = () =>
+      new Promise((resolve) => {
+        if (window.L) return resolve(window.L);
+        const existing = document.querySelector('script[data-leaflet]');
+        if (existing) {
+          existing.addEventListener('load', () => resolve(window.L), { once: true });
+          return;
+        }
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = LEAFLET_CSS;
+        document.head.appendChild(link);
+
+        const script = document.createElement('script');
+        script.src = LEAFLET_JS;
+        script.dataset.leaflet = 'true';
+        script.onload = () => resolve(window.L);
+        document.body.appendChild(script);
+      });
+
+    let timer;
+
+    loadLeaflet().then((L) => {
+      if (!L || !mapRef.current || leafletMap.current) return;
+
+      const map = L.map(mapRef.current, {
+        zoomControl: true,
+        attributionControl: true,
+        scrollWheelZoom: false,
+      }).setView([47.2, 2.6], 6);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap contributors',
+      }).addTo(map);
+
+      leafletMap.current = map;
+
+      const icon = (emoji, cls = '') => L.divIcon({
+        className: 'ctaMapIcon ' + cls,
+        html: '<div class="mapMarker">' + emoji + '</div>',
+        iconSize: [42, 42],
+        iconAnchor: [21, 21],
+      });
+
+      const stations = [
+        { name: 'CIS Maubeuge', coords: [50.279, 3.973], emoji: '🚒' },
+        { name: 'CIS Lille', coords: [50.629, 3.057], emoji: '🚒' },
+        { name: 'CIS Paris', coords: [48.8566, 2.3522], emoji: '🚒' },
+        { name: 'CIS Lyon', coords: [45.764, 4.8357], emoji: '🚒' },
+        { name: 'CIS Marseille', coords: [43.2965, 5.3698], emoji: '🚒' },
+      ];
+
+      stations.forEach((station) => {
+        L.marker(station.coords, { icon: icon(station.emoji, 'station') })
+          .addTo(map)
+          .bindPopup('<b>' + station.name + '</b><br/>Centre de secours');
+      });
+
+      const departure = [50.279, 3.973];
+      const incident = [50.258, 3.944];
+
+      const route = L.polyline([departure, incident], {
+        color: '#e23432',
+        weight: 5,
+        opacity: 0.9,
+        dashArray: '8 10',
+      }).addTo(map);
+
+      L.marker(incident, { icon: icon('🔥', 'incident') })
+        .addTo(map)
+        .bindPopup('<b>Intervention en cours</b><br/>Feu d\'habitation');
+
+      const vehicle = L.marker(departure, { icon: icon('🚒', 'vehicle') })
+        .addTo(map)
+        .bindPopup('<b>FPT Maubeuge</b><br/>En intervention');
+
+      let progress = 0;
+      timer = setInterval(() => {
+        progress += 0.004;
+        if (progress > 1) progress = 0;
+        const lat = departure[0] + (incident[0] - departure[0]) * progress;
+        const lng = departure[1] + (incident[1] - departure[1]) * progress;
+        vehicle.setLatLng([lat, lng]);
+      }, 60);
+
+      map.fitBounds(route.getBounds().pad(1.8));
+      setTimeout(() => map.invalidateSize(), 300);
+    });
+
+    return () => {
+      if (timer) clearInterval(timer);
+      if (leafletMap.current) {
+        leafletMap.current.remove();
+        leafletMap.current = null;
+      }
+    };
+  }, []);
+
   return (
     <main className="site">
       <header className="top">
@@ -24,47 +134,36 @@ export default function Home() {
             <h1>Gérez les secours.<br /><span>À l'échelle d'un SDIS.</span></h1>
             <p>
               Prenez le contrôle d'un service départemental d'incendie et de secours,
-              coordonnez les centres, engagez vos véhicules et suivez chaque intervention sur la carte.
+              coordonnez les centres, engagez vos véhicules et suivez chaque intervention sur une vraie carte.
             </p>
 
             <div className="welcomeButtons">
-              <a className="play" href="#discover">🗺️ DÉCOUVRIR LA CARTE</a>
+              <a className="play" href="#map">🗺️ OUVRIR LA CARTE</a>
               <a className="how" href="#concept">Comment ça fonctionne ?</a>
             </div>
 
             <div className="heroStats">
               <div><b>🇫🇷</b><span>SDIS français</span></div>
-              <div><b>🚒</b><span>Centres de secours</span></div>
-              <div><b>📍</b><span>Carte opérationnelle</span></div>
+              <div><b>🚒</b><span>Centres réels</span></div>
+              <div><b>📍</b><span>Carte interactive</span></div>
             </div>
           </div>
 
-          <div className="mapPreview">
+          <div className="mapPreview realMapCard" id="map">
             <div className="mapTop">
               <div>
                 <small>CARTE OPÉRATIONNELLE</small>
-                <b>France · aperçu</b>
+                <b>France · temps réel</b>
               </div>
               <span className="liveDot">EN DIRECT</span>
             </div>
 
-            <div className="franceMap">
-              <div className="mapGrid"></div>
-              <div className="franceShape"></div>
-
-              <div className="mapPin pin1"><span>🚒</span><b>CIS</b></div>
-              <div className="mapPin pin2"><span>🚒</span><b>CIS</b></div>
-              <div className="mapPin pin3"><span>🚑</span><b>VSAV</b></div>
-              <div className="incidentPin"><span>🔥</span></div>
-
-              <div className="route route1"></div>
-              <div className="vehicle vehicle1">🚒</div>
-            </div>
+            <div ref={mapRef} className="realMap" aria-label="Carte opérationnelle CTA 18" />
 
             <div className="mapBottom">
               <div><span className="green"></span> Centres disponibles</div>
               <div><span className="red"></span> Intervention</div>
-              <b>1 véhicule engagé →</b>
+              <b>🚒 Véhicule en déplacement</b>
             </div>
           </div>
         </div>
@@ -75,7 +174,7 @@ export default function Home() {
           <div className="sectionIntro">
             <span>LE CONCEPT CTA 18</span>
             <h2>Vous ne gérez pas une caserne.<br />Vous gérez <em>tout un territoire.</em></h2>
-            <p>Chaque décision commence au CTA et se poursuit directement sur la carte opérationnelle.</p>
+            <p>Les centres et les interventions sont visualisés directement sur une carte opérationnelle.</p>
           </div>
 
           <div className="conceptGrid">
@@ -83,28 +182,28 @@ export default function Home() {
               <div className="cardNumber">01</div>
               <div className="conceptIcon">🇫🇷</div>
               <h3>Choisissez votre SDIS</h3>
-              <p>Basez votre partie sur un territoire français et son réseau de centres de secours.</p>
+              <p>Jouez sur un département français et pilotez l'ensemble de son organisation opérationnelle.</p>
             </article>
 
             <article className="conceptCard">
               <div className="cardNumber">02</div>
               <div className="conceptIcon">🏢</div>
               <h3>Commandez les centres</h3>
-              <p>Gérez les effectifs, les engins et la disponibilité de vos moyens sur l'ensemble du département.</p>
+              <p>Gérez les effectifs, les engins et la disponibilité des centres présents sur votre territoire.</p>
             </article>
 
             <article className="conceptCard">
               <div className="cardNumber">03</div>
               <div className="conceptIcon">🚨</div>
               <h3>Engagez les secours</h3>
-              <p>Recevez les alertes, choisissez les moyens adaptés et lancez l'intervention.</p>
+              <p>Recevez les alertes, choisissez les moyens adaptés et lancez immédiatement l'intervention.</p>
             </article>
 
             <article className="conceptCard accent">
               <div className="cardNumber">04</div>
               <div className="conceptIcon">🗺️</div>
-              <h3>Suivez l'intervention</h3>
-              <p>Visualisez les véhicules en déplacement et suivez leur progression jusqu'au lieu du sinistre.</p>
+              <h3>Suivez les véhicules</h3>
+              <p>Chaque engin engagé apparaît sur la carte et peut être suivi pendant son déplacement.</p>
             </article>
           </div>
         </div>
@@ -135,13 +234,13 @@ export default function Home() {
           </div>
 
           <div className="operationCopy">
-            <span>UNE INTERVENTION, DU DÉPART À L'ARRIVÉE</span>
-            <h2>Chaque véhicule devient visible sur le terrain.</h2>
+            <span>UNE VRAIE CARTE COMME POSTE DE COMMANDEMENT</span>
+            <h2>Visualisez les secours directement sur le terrain.</h2>
             <p>
-              Le CTA engage les moyens. La carte devient votre poste de commandement :
-              vous visualisez les départs, les déplacements et les interventions en cours.
+              Le CTA engage les moyens et la carte devient le cœur du jeu :
+              centres de secours, véhicules disponibles, alertes et déplacements en cours.
             </p>
-            <a className="textLink" href="#home">Explorer CTA 18 →</a>
+            <a className="textLink" href="#map">Voir la carte opérationnelle →</a>
           </div>
         </div>
       </section>
