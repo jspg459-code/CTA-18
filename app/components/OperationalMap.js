@@ -29,8 +29,10 @@ export default function OperationalMap({ stations, fallback }) {
     <div className="operationalMap">
       <MapContainer center={center} zoom={fallback.zoom || 9} scrollWheelZoom className="leafletOperational">
         <TileLayer
-          attribution='&copy; OpenStreetMap contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; OpenStreetMap contributors &copy; CARTO'
+          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+          subdomains="abcd"
+          maxZoom={20}
         />
         <FitToStations stations={stations} fallback={fallback} />
         {stations.map((station) => (
