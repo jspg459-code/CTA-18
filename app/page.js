@@ -419,10 +419,10 @@ const operatorConsole = selectedService ? <div className="operatorConsoleInline"
                 </div>
               </div>
 
-              <div className="commandMapTitle">
+              {ctaView !== 'console' && <div className="commandMapTitle">
                 <div><span className="authTag">CENTRE OPÉRATIONNEL</span><h1>{selectedService.name}</h1><p>Carte opérationnelle • {operationalStations.length} CIS référencés • positions réelles</p></div>
                 <div className="territoryLive"><i className="legendDot green"></i> TERRITOIRE EN LIGNE</div>
-              </div>
+              </div>}
 
               <div className="commandMapArea">
                 {ctaView === 'console' ? operatorConsole : ctaView === 'map' ? <>
