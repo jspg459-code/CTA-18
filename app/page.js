@@ -159,6 +159,7 @@ export default function Home() {
   const [stations, setStations] = useState([]);
   const [stationsLoading, setStationsLoading] = useState(false);
   const [selectedStation, setSelectedStation] = useState(null);
+  const [ctaView, setCtaView] = useState('map');
 
   const closeAuth = () => { setAuthMode(null); setAuthMessage(''); };
   const logout = () => { setPlayer(null); setAuthMode(null); setAuthMessage(''); setServicePicker(false); setSelectedService(null); setSearch(''); };
@@ -191,6 +192,8 @@ export default function Home() {
   const openCTA = (service) => {
     setSearch('');
     setServicePicker(false);
+    setSelectedStation(null);
+    setCtaView('map');
     setSelectedService(service);
     window.scrollTo({ top: 0, behavior: 'instant' });
   };
@@ -206,17 +209,50 @@ export default function Home() {
   useEffect(() => {
     if (!selectedService) return;
     let cancelled = false;
-    const loadStations = async () => {
-      setStationsLoading(true);
-      setStations([]);
+    const cacheKey = 'cta18-stations-' + selectedService.code;
+
+    const readCache = () => {
       try {
-        const response = await fetch('/api/stations?code=' + encodeURIComponent(selectedService.code));
+        const raw = window.localStorage.getItem(cacheKey);
+        if (!raw) return null;
+        const cached = JSON.parse(raw);
+        if (!Array.isArray(cached?.stations)) return null;
+        return cached.stations;
+      } catch {
+        return null;
+      }
+    };
+
+    const cachedStations = readCache();
+    if (cachedStations?.length) {
+      setStations(cachedStations);
+      setStationsLoading(false);
+    } else {
+      setStations([]);
+      setStationsLoading(true);
+    }
+
+    const loadStations = async () => {
+      try {
+        const response = await fetch('/api/stations?code=' + encodeURIComponent(selectedService.code), {
+          cache: 'force-cache',
+        });
         const data = await response.json();
         if (!response.ok) throw new Error(data?.error || 'Impossible de charger les centres.');
-        if (!cancelled) setStations(Array.isArray(data.stations) ? data.stations : []);
-      } catch { if (!cancelled) setStations([]); }
-      finally { if (!cancelled) setStationsLoading(false); }
+        const nextStations = Array.isArray(data.stations) ? data.stations : [];
+        if (!cancelled) {
+          setStations(nextStations);
+          try {
+            window.localStorage.setItem(cacheKey, JSON.stringify({ stations: nextStations, savedAt: Date.now() }));
+          } catch {}
+        }
+      } catch {
+        if (!cancelled && !cachedStations?.length) setStations([]);
+      } finally {
+        if (!cancelled) setStationsLoading(false);
+      }
     };
+
     loadStations();
     return () => { cancelled = true; };
   }, [selectedService]);
@@ -264,14 +300,14 @@ export default function Home() {
             <section className="ctaMapCommand">
               <div className="commandMapToolbar">
                 <div className="mapToolGroup">
-                  <button className="active">Cartographie</button>
-                  <button>Synoptique des opérations</button>
-                  <button>Synoptique des moyens</button>
-                  <button>Chat</button>
-                  <button>Billets</button>
+                  <button className={ctaView === 'map' ? 'active' : ''} type="button" onClick={() => setCtaView('map')}>Cartographie</button>
+                  <button className={ctaView === 'operations' ? 'active' : ''} type="button" onClick={() => setCtaView('operations')}>Synoptique des opérations</button>
+                  <button className={ctaView === 'resources' ? 'active' : ''} type="button" onClick={() => setCtaView('resources')}>Synoptique des moyens</button>
+                  <button className={ctaView === 'chat' ? 'active' : ''} type="button" onClick={() => setCtaView('chat')}>Chat</button>
+                  <button className={ctaView === 'tickets' ? 'active' : ''} type="button" onClick={() => setCtaView('tickets')}>Billets</button>
                 </div>
                 <div className="mapToolGroup secondary">
-                  <button>Options</button><button>Aide</button>
+                  <button type="button">Options</button><button type="button">Aide</button>
                 </div>
               </div>
 
@@ -281,21 +317,44 @@ export default function Home() {
               </div>
 
               <div className="commandMapArea">
-                <OperationalMap
-                  stations={operationalStations}
-                  fallback={{ lat: 46.603354, lon: 1.888334, zoom: 6 }}
-                  onStationSelect={setSelectedStation}
-                />
-                <aside className="incomingCallOverlay">
-                  <div className="callOverlayHead"><span className="phonePulse">📱</span><div><b>Appels vers 18/112</b><small>Réception opérationnelle</small></div></div>
-                  <div className="callOverlayEmpty"><strong>0</strong><span>appel en attente</span></div>
-                  <div className="callOverlayActions"><button className="takeCall">Prendre l'appel</button><button>Refuser l'appel</button></div>
-                </aside>
-                <div className="mapLegendOperational">
-                  <div><i className="legendDot green"></i> CIS disponible</div>
-                  <div><i className="legendDot red"></i> CIS engagé</div>
-                  <div><i className="legendDot orange"></i> Intervention</div>
-                </div>
+                {ctaView === 'map' ? <>
+                  <OperationalMap
+                    stations={operationalStations}
+                    fallback={{ lat: 46.603354, lon: 1.888334, zoom: 6 }}
+                    onStationSelect={setSelectedStation}
+                  />
+                  <aside className="incomingCallOverlay">
+                    <div className="callOverlayHead"><span className="phonePulse">📱</span><div><b>Appels vers 18/112</b><small>Réception opérationnelle</small></div></div>
+                    <div className="callOverlayEmpty"><strong>0</strong><span>appel en attente</span></div>
+                    <div className="callOverlayActions"><button className="takeCall" type="button">Prendre l'appel</button><button type="button">Refuser l'appel</button></div>
+                  </aside>
+                  <div className="mapLegendOperational">
+                    <div><i className="legendDot green"></i> CIS disponible</div>
+                    <div><i className="legendDot red"></i> CIS engagé</div>
+                    <div><i className="legendDot orange"></i> Intervention</div>
+                  </div>
+                </> : ctaView === 'operations' ? <div className="synopticScreen">
+                  <div className="synopticScreenHead"><span className="authTag">SYNOPTIQUE DES OPÉRATIONS</span><h2>Suivi des interventions</h2><p>Toutes les alertes et les opérations du territoire apparaîtront ici en temps réel.</p></div>
+                  <div className="synopticMetricGrid">
+                    <div><b>0</b><span>APPELS EN ATTENTE</span></div>
+                    <div><b>0</b><span>INTERVENTIONS EN COURS</span></div>
+                    <div><b>0</b><span>ENGINS ENGAGÉS</span></div>
+                    <div><b>–</b><span>TEMPS MOYEN</span></div>
+                  </div>
+                  <div className="synopticEmptyState"><span>🚨</span><h3>Aucune opération active</h3><p>Le tableau se remplira automatiquement dès qu'un appel sera traité.</p></div>
+                </div> : ctaView === 'resources' ? <div className="synopticScreen">
+                  <div className="synopticScreenHead"><span className="authTag">SYNOPTIQUE DES MOYENS</span><h2>Disponibilité opérationnelle</h2><p>Vue en temps réel des CIS, engins et personnels disponibles.</p></div>
+                  <div className="synopticMetricGrid resources">
+                    <div><b>{operationalStations.length}</b><span>CIS DISPONIBLES</span></div>
+                    <div><b>{personnelTotal}</b><span>PERSONNELS</span></div>
+                    <div><b>{Object.values(fleetTotals).reduce((sum, value) => sum + value, 0)}</b><span>ENGINS</span></div>
+                    <div><b>100%</b><span>DISPONIBILITÉ</span></div>
+                  </div>
+                  <div className="synopticFleetList">{Object.entries(fleetTotals).map(([type,count]) => <div key={type}><b>{type}</b><strong>{count}</strong><span>{vehicleCatalog[type] || 'Moyen opérationnel'}</span></div>)}</div>
+                </div> : <div className="synopticScreen placeholderScreen">
+                  <div className="synopticScreenHead"><span className="authTag">{ctaView === 'chat' ? 'CHAT OPÉRATIONNEL' : 'BILLETS'}</span><h2>{ctaView === 'chat' ? 'Communications CTA' : 'Billets opérationnels'}</h2><p>Cette section est prête pour la prochaine étape du jeu.</p></div>
+                  <div className="synopticEmptyState"><span>{ctaView === 'chat' ? '💬' : '🎫'}</span><h3>Aucun élément pour le moment</h3></div>
+                </div>}
               </div>
             </section>
 
