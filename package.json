@@ -11,6 +11,8 @@
   "dependencies": {
     "next": "latest",
     "react": "latest",
-    "react-dom": "latest"
+    "react-dom": "latest",
+    "leaflet": "^1.9.4",
+    "react-leaflet": "^5.0.0"
   }
 }
