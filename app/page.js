@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_KEY;
+// Configuration publique Supabase (clé publishable, utilisable côté navigateur)
+const SUPABASE_URL = 'https://zypntdqemnehqgogwntu.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_OQ2mszgzlwfBRMVPCi33zw_jOT-hadJ';
 
 export default function Home() {
   const [authMode, setAuthMode] = useState(null);
