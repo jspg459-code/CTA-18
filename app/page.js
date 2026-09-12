@@ -203,21 +203,65 @@ export default function Home() {
       {player ? (
         selectedService ? (
           <section className="commandPage"><div className="wrap">
-            <button className="backToPicker" type="button" onClick={() => setServicePicker(true)}>← CHANGER DE SDIS</button>
-            <div className="commandHero">
-              <span className="authTag">CENTRE DE COMMANDEMENT • EN LIGNE</span>
-              <h1>CTA — {selectedService.name}</h1>
-              <p>Bienvenue dans votre centre de traitement de l’alerte. Vous commandez désormais le territoire de <strong>{selectedService.area}</strong>.</p>
+            <div className="commandTopline">
+              <button className="backToPicker" type="button" onClick={() => setServicePicker(true)}>← CHANGER DE SDIS</button>
+              <span className="commandLive">● SYSTÈME EN LIGNE</span>
             </div>
-            <div className="commandCards">
-              <article><span>🚨</span><h3>Alertes</h3><p>Aucune intervention active pour le moment. Les prochaines alertes arriveront directement dans votre CTA.</p></article>
-              <article><span>🏢</span><h3>{stationsLoading ? '…' : stations.length} CIS</h3><p>Centres opérationnels référencés sur votre territoire.</p></article>
-              <article><span>🚒</span><h3>Engins disponibles</h3><p>Le suivi des véhicules et leur disponibilité sera géré depuis ce centre de commandement.</p></article>
+
+            <div className="commandCenterHero">
+              <span className="authTag">CTA OPÉRATIONNEL • {selectedService.code}</span>
+              <h1>Centre de commandement</h1>
+              <p>Vous êtes aux commandes du territoire <strong>{selectedService.area}</strong>. Les alertes et les interventions apparaîtront ici.</p>
             </div>
-            <div className="dataStatus">
-              <div><span className="statusPill">● SYSTÈME OPÉRATIONNEL</span><h2>Vous êtes aux commandes.</h2><p>Depuis ce CTA, vous recevrez les alertes, choisirez les CIS à engager et suivrez les véhicules en intervention sur la carte avec leurs déplacements par les routes.</p></div>
-              <button className="startGame" type="button" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>OUVRIR LES OPÉRATIONS →</button>
+
+            <div className="commandStatsGrid">
+              <article><span className="statIcon alert">🚨</span><div><b>0</b><small>ALERTE ACTIVE</small></div></article>
+              <article><span className="statIcon">🏢</span><div><b>{stationsLoading ? '…' : stations.length}</b><small>CIS RÉFÉRENCÉS</small></div></article>
+              <article><span className="statIcon">🚒</span><div><b>0</b><small>ENGINS ENGAGÉS</small></div></article>
+              <article><span className="statIcon">👨‍🚒</span><div><b>0</b><small>ÉQUIPAGES MOBILISÉS</small></div></article>
             </div>
+
+            <div className="commandBoard">
+              <article className="activeAlertCard">
+                <div className="boardHeader"><span>🚨 CENTRE DE TRAITEMENT DES ALERTES</span><b>EN ATTENTE</b></div>
+                <div className="activeAlertBody">
+                  <div className="incidentEmoji">📟</div>
+                  <div className="incidentContent">
+                    <small>AUCUNE ALERTE EN COURS</small>
+                    <h2>Le CTA est prêt.</h2>
+                    <p>La prochaine intervention apparaîtra ici avec son adresse, son niveau de priorité et les moyens à engager.</p>
+                    <div className="incidentMeta"><span>📍 Territoire : {selectedService.area}</span><span>📡 Réseau opérationnel actif</span></div>
+                    <button className="dispatchButton" type="button">EN ATTENTE D'UNE ALERTE</button>
+                  </div>
+                </div>
+              </article>
+
+              <aside className="commandSidePanel">
+                <div className="sidePanelTitle"><span>ÉTAT DU TERRITOIRE</span><b>● NORMAL</b></div>
+                <div className="territoryLine"><span>CIS opérationnels</span><strong>{stationsLoading ? '…' : stations.length}</strong><em className="ok">DISPONIBLE</em></div>
+                <div className="territoryLine"><span>Interventions</span><strong>0</strong><em className="ok">CALME</em></div>
+                <div className="territoryLine"><span>Alertes en attente</span><strong>0</strong><em className="ok">AUCUNE</em></div>
+                <button className="secondaryCommandButton" type="button" onClick={() => setServicePicker(true)}>CHANGER DE TERRITOIRE</button>
+              </aside>
+            </div>
+
+            <section className="fleetSection">
+              <div className="sectionBar"><div><span className="authTag">MOYENS OPÉRATIONNELS</span><h2>Flotte du territoire</h2></div><button type="button">VOIR TOUS LES ENGINS →</button></div>
+              <div className="fleetGrid">
+                <article className="vehicleCard"><span>🚒</span><div><b>FPT</b><small>Fourgon pompe-tonne</small></div><em>● DISPONIBLE</em></article>
+                <article className="vehicleCard"><span>🚑</span><div><b>VSAV</b><small>Secours à personne</small></div><em>● DISPONIBLE</em></article>
+                <article className="vehicleCard"><span>🚒</span><div><b>EPA</b><small>Échelle aérienne</small></div><em>● DISPONIBLE</em></article>
+                <article className="vehicleCard"><span>🚙</span><div><b>VLCG</b><small>Commandement</small></div><em>● DISPONIBLE</em></article>
+              </div>
+            </section>
+
+            <section className="commandActivity">
+              <div className="sectionBar"><div><span className="authTag">JOURNAL OPÉRATIONNEL</span><h2>Activité du CTA</h2></div></div>
+              <div className="activityList">
+                <div><span className="activityDot green"></span><p><b>CTA connecté</b> — Votre territoire {selectedService.area} est chargé et prêt à jouer.</p></div>
+                <div><span className="activityDot gray"></span><p>En attente de la première alerte opérationnelle.</p></div>
+              </div>
+            </section>
           </div></section>
         ) : (
           <section className="dashboardPage"><div className="wrap dashboardWrap">
