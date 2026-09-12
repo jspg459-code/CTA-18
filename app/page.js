@@ -109,7 +109,7 @@ const departmentRows = `
 976|Mayotte
 `.trim();
 
-const departments = departmentRows.split('\\n').map((row) => {
+const departments = departmentRows.split('\n').map((row) => {
   const [code, name] = row.split('|');
   return { code, name, type: 'SDIS', label: ['75','92','93','94'].includes(code) ? 'Zone BSPP' : 'SDIS ' + code };
 });
