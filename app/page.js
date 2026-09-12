@@ -142,6 +142,10 @@ const buildOperationalProfile = (station, index) => {
   profile.push({ type: 'VL', count: 1 });
   return {
     ...station,
+    // Les coordonnées issues des sources cartographiques peuvent arriver sous forme de texte.
+    // On les normalise ici pour que Leaflet puisse afficher tous les marqueurs opérationnels.
+    lat: Number(station.lat),
+    lon: Number(station.lon),
     fleet: profile,
     personnel: 8 + (seed % 18),
     source: 'Base CTA 18',
@@ -330,15 +334,43 @@ export default function Home() {
   const engagedVehiclesCount = dispatchVehicles.length;
 
   const startScenario = (scenario) => {
-    const base = operationalStations[0];
-    const call = { id:Date.now().toString(), scenario, status:'APPEL EN COURS', address:'Adresse générée automatiquement lors de l’alerte', lat:base?.lat||46.6, lon:base?.lon||1.88, startedAt:Date.now() };
-    setActiveCall(call); setDispatchVehicles([]); setCallQuestionIndex(0); setOperatorPanel('call'); setCtaView('operations');
+    // Une intervention test reçoit immédiatement une vraie position cartographique exploitable.
+    // Le point est généré dans le secteur d'un CIS réel du territoire sélectionné.
+    const candidates = operationalStations.filter((station) => Number.isFinite(Number(station.lat)) && Number.isFinite(Number(station.lon)));
+    const base = candidates.length ? candidates[Math.floor(Math.random() * candidates.length)] : null;
+    const seed = Date.now();
+    const latOffset = (((seed % 1000) / 1000) - 0.5) * 0.05;
+    const lonOffset = ((((Math.floor(seed / 1000)) % 1000) / 1000) - 0.5) * 0.05;
+    const lat = base ? Number(base.lat) + latOffset : 46.603354;
+    const lon = base ? Number(base.lon) + lonOffset : 1.888334;
+    const address = base
+      ? (base.address ? 'Secteur proche de ' + base.address : 'Secteur de ' + base.name)
+      : 'Localisation générée automatiquement sur le territoire';
+    const call = { id:Date.now().toString(), scenario, status:'APPEL EN COURS', address, lat, lon, startedAt:Date.now(), originStationId:base?.id || null };
+    setActiveCall(call);
+    setDispatchVehicles([]);
+    setCallQuestionIndex(0);
+    setOperatorPanel('call');
+    // L'appel reste accessible dans la console, mais la carte possède immédiatement sa localisation.
+    setCtaView('map');
   };
   const dispatchVehicle = (station, type) => {
     if (!activeCall) return;
-    const item={id:Date.now()+'-'+type,stationId:station.id,stationName:station.name,type,status:'EN ROUTE',lat:station.lat,lon:station.lon};
+    const item={
+      id:Date.now()+'-'+type,
+      stationId:station.id,
+      stationName:station.name,
+      type,
+      status:'EN ROUTE',
+      // Coordonnées numériques obligatoires pour l'affichage du moyen sur Leaflet.
+      lat:Number(station.lat),
+      lon:Number(station.lon)
+    };
+    if (!Number.isFinite(item.lat) || !Number.isFinite(item.lon)) return;
     setDispatchVehicles(list=>[...list,item]);
     setActiveCall(call=>({...call,status:'MOYENS ENGAGÉS'}));
+    // Après engagement, retour immédiat à la cartographie pour suivre les moyens.
+    setCtaView('map');
   };
   const sendVsavToHospital = (vehicle) => {
     setDispatchVehicles(list=>list.map(v=>v.id===vehicle.id?{...v,status:'TRANSPORT HÔPITAL'}:v));
