@@ -161,9 +161,29 @@ export default function Home() {
   const [stationsError, setStationsError] = useState('');
   const [selectedStation, setSelectedStation] = useState(null);
   const [ctaView, setCtaView] = useState('map');
+  const [creatorOpen, setCreatorOpen] = useState(false);
+  const [creatorTab, setCreatorTab] = useState('library');
+  const [scenarios, setScenarios] = useState([]);
+  const [scenarioForm, setScenarioForm] = useState({ title:'', category:'SAP', difficulty:'Moyen', caller:'', description:'', questions:[{question:'Que s’est-il passé ?',answer:''}], requiredVehicles:[], recommendedVehicles:[], possibleReinforcements:[] });
 
   const closeAuth = () => { setAuthMode(null); setAuthMessage(''); };
   const logout = () => { setPlayer(null); setAuthMode(null); setAuthMessage(''); setServicePicker(false); setSelectedService(null); setSearch(''); };
+
+  useEffect(() => { try { const saved = window.localStorage.getItem('cta18-scenarios-v1'); if (saved) setScenarios(JSON.parse(saved)); } catch {} }, []);
+  useEffect(() => { try { window.localStorage.setItem('cta18-scenarios-v1', JSON.stringify(scenarios)); } catch {} }, [scenarios]);
+
+  const creatorAuthorized = player?.email?.toLowerCase() === 'jspg459@gmail.com';
+  const vehicleTypes = ['VSAV','FPT','FPTL','VSR','EPA','VL','VLCG','CCF','VID','VGRIMP'];
+  const toggleScenarioVehicle = (field, vehicle) => setScenarioForm((form) => ({...form,[field]:form[field].includes(vehicle)?form[field].filter(x=>x!==vehicle):[...form[field],vehicle]}));
+  const addScenarioQuestion = () => setScenarioForm((form) => ({...form,questions:[...form.questions,{question:'',answer:''}]}));
+  const updateScenarioQuestion = (index, field, value) => setScenarioForm((form) => ({...form,questions:form.questions.map((q,i)=>i===index?{...q,[field]:value}:q)}));
+  const saveScenario = () => {
+    if (!scenarioForm.title.trim()) return;
+    setScenarios((list)=>[{id:Date.now().toString(),...scenarioForm,status:'Disponible',createdAt:new Date().toISOString(),createdBy:player?.email||'Créateur'},...list]);
+    setScenarioForm({title:'',category:'SAP',difficulty:'Moyen',caller:'',description:'',questions:[{question:'Que s’est-il passé ?',answer:''}],requiredVehicles:[],recommendedVehicles:[],possibleReinforcements:[]});
+    setCreatorTab('library');
+  };
+  const deleteScenario = (id) => setScenarios((list)=>list.filter(s=>s.id!==id));
 
   const filteredDepartments = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -284,7 +304,7 @@ export default function Home() {
     <main className="site">
       <header className="top"><div className="wrap navWrap">
         <a className="brand" href="#home" onClick={() => { closeAuth(); setServicePicker(false); setSelectedService(null); }}><span className="shield">18</span><span>CTA <b>18</b></span></a>
-        <div className="account">{player ? <><span className="playerName">👤 {playerName}</span><button type="button" className="logout" onClick={logout}>Déconnexion</button></> : <><button type="button" onClick={() => setAuthMode('login')}>Connexion</button><button type="button" className="signup" onClick={() => setAuthMode('signup')}>Inscription</button></>}</div>
+        <div className="account">{player ? <>{creatorAuthorized && <button type="button" className="creatorNavButton" onClick={() => setCreatorOpen(true)}>👑 Créateur</button>}<span className="playerName">👤 {playerName}</span><button type="button" className="logout" onClick={logout}>Déconnexion</button></> : <><button type="button" onClick={() => setAuthMode('login')}>Connexion</button><button type="button" className="signup" onClick={() => setAuthMode('signup')}>Inscription</button></>}</div>
       </div></header>
 
       {player ? (
