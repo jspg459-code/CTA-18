@@ -23,7 +23,10 @@ function buildQuery(code) {
     return '[out:json][timeout:60];nwr["amenity"="fire_station"](43.05,5.15,43.55,5.75);out center tags;';
   }
 
-  return '[out:json][timeout:90];area["boundary"="administrative"]["admin_level"="6"]["ref:INSEE"="' + code + '"]->.searchArea;nwr["amenity"="fire_station"](area.searchArea);out center tags;';
+  // Certains départements ne disposent pas toujours de l'area pré-calculée sur tous les miroirs Overpass.
+  // On récupère donc à la fois l'area et la relation administrative puis on la convertit avec map_to_area.
+  // Cela évite le résultat vide qui bloquait totalement l'engagement des moyens.
+  return '[out:json][timeout:90];(area["boundary"="administrative"]["admin_level"="6"]["ref:INSEE"="' + code + '"];rel["boundary"="administrative"]["admin_level"="6"]["ref:INSEE"="' + code + '"];)->.department;.department map_to_area->.searchArea;nwr["amenity"="fire_station"](area.searchArea);out center tags;';
 }
 
 async function queryOverpass(query) {
