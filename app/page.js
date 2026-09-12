@@ -174,6 +174,8 @@ export default function Home() {
   const [creatorOpen, setCreatorOpen] = useState(false);
   const [creatorTab, setCreatorTab] = useState('library');
   const [scenarios, setScenarios] = useState([]);
+  const [scenariosLoading, setScenariosLoading] = useState(false);
+  const [scenarioError, setScenarioError] = useState('');
   const [scenarioForm, setScenarioForm] = useState({ title:'', category:'SAP', difficulty:'Moyen', caller:'', description:'', questions:[{question:'Que s’est-il passé ?',answer:''}], requiredVehicles:[], recommendedVehicles:[], possibleReinforcements:[],victimTransport:{has_victims:false,victim_count:0,transport_required:false,transport_count:0,destination_type:'auto',notes:''} });
 
   const closeAuth = () => { setAuthMode(null); setAuthMessage(''); };
@@ -182,10 +184,18 @@ export default function Home() {
   const scenarioApiHeaders = () => ({ 'Content-Type':'application/json', apikey:SUPABASE_KEY, Authorization:'Bearer ' + sessionToken });
   const loadScenarios = async () => {
     if (!sessionToken) return;
-    const response = await fetch(SUPABASE_URL + '/rest/v1/intervention_scenarios?select=*&order=created_at.desc',{headers:scenarioApiHeaders()});
-    if (!response.ok) return;
-    const rows = await response.json();
-    setScenarios(rows.map(s=>({id:s.id,title:s.title,category:s.category,difficulty:s.difficulty,caller:s.caller||'',description:s.description||'',questions:s.questions||[],requiredVehicles:s.required_vehicles||[],recommendedVehicles:s.recommended_vehicles||[],possibleReinforcements:s.possible_reinforcements||[],victimTransport:{has_victims:false,victim_count:0,transport_required:false,transport_count:0,destination_type:'auto',notes:'',...(s.victim_transport||{})},status:s.status,createdAt:s.created_at,createdBy:s.created_by_email})));
+    setScenariosLoading(true);
+    setScenarioError('');
+    try {
+      const response = await fetch(SUPABASE_URL + '/rest/v1/intervention_scenarios?select=*&status=eq.Disponible&order=created_at.desc',{headers:scenarioApiHeaders()});
+      if (!response.ok) throw new Error('Erreur de chargement des scénarios (' + response.status + ')');
+      const rows = await response.json();
+      setScenarios(rows.map(s=>({id:s.id,title:s.title,category:s.category,difficulty:s.difficulty,caller:s.caller||'',description:s.description||'',questions:s.questions||[],requiredVehicles:s.required_vehicles||[],recommendedVehicles:s.recommended_vehicles||[],possibleReinforcements:s.possible_reinforcements||[],victimTransport:{has_victims:false,victim_count:0,transport_required:false,transport_count:0,destination_type:'auto',notes:'',...(s.victim_transport||{})},status:s.status,createdAt:s.created_at,createdBy:s.created_by_email})));
+    } catch (error) {
+      setScenarioError(error?.message || 'Impossible de charger les scénarios.');
+    } finally {
+      setScenariosLoading(false);
+    }
   };
   useEffect(()=>{loadScenarios();},[sessionToken]);
 
@@ -356,6 +366,19 @@ export default function Home() {
   const activeInterventionsCount = activeCall ? 1 : 0;
   const engagedVehiclesCount = dispatchVehicles.length;
 
+  // Les scénarios sont déclenchés automatiquement et aléatoirement pendant la partie.
+  useEffect(() => {
+    if (!selectedService || !scenarios.length || activeCall) return;
+    const delay = 30000 + Math.floor(Math.random() * 45000); // 30 à 75 secondes
+    const timer = window.setTimeout(() => {
+      const available = scenarios.filter(s => s.status === 'Disponible');
+      if (!available.length) return;
+      const scenario = available[Math.floor(Math.random() * available.length)];
+      startScenario(scenario);
+    }, delay);
+    return () => window.clearTimeout(timer);
+  }, [selectedService, scenarios, activeCall]);
+
   const startScenario = (scenario) => {
     // Une intervention test reçoit immédiatement une vraie position cartographique exploitable.
     // Le point est généré dans le secteur d'un CIS réel du territoire sélectionné.
@@ -428,7 +451,7 @@ export default function Home() {
 const operatorConsole = selectedService ? <div className="operatorConsoleInline">
   <div className="operatorHeader"><div><span className="authTag">POSTE OPÉRATEUR CTA</span><h2>Console opérationnelle</h2></div><div className="operatorStatus">{activeCall ? '🔴 '+activeCall.status : '🟢 EN ATTENTE D’ALERTE'}</div></div>
   <div className="operatorTabs"><button className={operatorPanel==='calls'?'active':''} onClick={()=>setOperatorPanel('calls')}>📞 Appels</button><button className={operatorPanel==='call'?'active':''} onClick={()=>setOperatorPanel('call')}>🎧 Appel en cours</button><button className={operatorPanel==='dispatch'?'active':''} onClick={()=>setOperatorPanel('dispatch')}>🚒 Engagement</button><button className={operatorPanel==='means'?'active':''} onClick={()=>setOperatorPanel('means')}>📊 Moyens</button><button className={operatorPanel==='hospital'?'active':''} onClick={()=>setOperatorPanel('hospital')}>🏥 Transports</button></div>
-  {operatorPanel==='calls' && <div className="operatorBody"><h3>📞 Déclencher un scénario de test</h3><div className="scenarioLaunchGrid">{scenarios.map(s=><button key={s.id} className="launchScenario" onClick={()=>startScenario(s)}><b>{s.category}</b><strong>{s.title}</strong><small>{s.difficulty} • {s.victimTransport?.has_victims?'Victime(s)':'Sans victime'}</small></button>)}</div>{scenarios.length===0&&<p>Aucun scénario disponible.</p>}</div>}
+  {operatorPanel==='calls' && <div className="operatorBody"><h3>📞 Appels entrants</h3><p className="operatorHint">Les scénarios disponibles sont tirés aléatoirement et déclenchent automatiquement un appel pendant la partie.</p><div className="scenarioLaunchGrid">{scenariosLoading ? <div className="scenarioEmpty">Chargement des scénarios…</div> : scenarioError ? <div className="scenarioEmpty">{scenarioError}</div> : scenarios.map(s=><button key={s.id} className="launchScenario" onClick={()=>startScenario(s)}><b>{s.category}</b><strong>{s.title}</strong><small>{s.difficulty} • {s.victimTransport?.has_victims?'Victime(s)':'Sans victime'}</small></button>)}</div>{scenarios.length===0&&<p>Aucun scénario disponible.</p>}</div>}
   {operatorPanel==='call' && <div className="operatorBody">{!activeCall?<div className="operatorEmpty">Aucun appel actif.</div>:<><div className="callCard"><span>📞 APPELANT</span><h3>{activeCall.scenario.caller||'Témoin'}</h3><p>{activeCall.scenario.description}</p></div>{activeCall.scenario.questions?.length>0&&<div className="qaOperator"><div><span>QUESTION {callQuestionIndex+1}/{activeCall.scenario.questions.length}</span><h3>{activeCall.scenario.questions[callQuestionIndex].question}</h3><p>Réponse : {activeCall.scenario.questions[callQuestionIndex].answer||'À préciser'}</p></div><div className="qaControls"><button disabled={callQuestionIndex===0} onClick={()=>setCallQuestionIndex(i=>i-1)}>←</button><button disabled={callQuestionIndex>=activeCall.scenario.questions.length-1} onClick={()=>setCallQuestionIndex(i=>i+1)}>→</button></div></div>}<button className="operatorPrimary" onClick={()=>setOperatorPanel('dispatch')}>🚒 Passer à l'engagement des moyens</button></>}</div>}
   {operatorPanel==='dispatch' && <div className="operatorBody"><h3>🚒 Engager les moyens</h3>{!activeCall?<p>Aucune intervention sélectionnée.</p>:stationsLoading?<p>⏳ Chargement des CIS disponibles…</p>:stationsError?<div><p>⚠️ {stationsError}</p><button className="operatorPrimary" onClick={()=>{setStationsError('');setStationsLoading(true);fetch('/api/stations?code='+encodeURIComponent(selectedService.code)+'&retry='+Date.now(),{cache:'no-store'}).then(r=>r.json()).then(data=>{if(Array.isArray(data.stations)&&data.stations.length){setStations(data.stations);setStationsError('')}else setStationsError(data.error||'Aucun centre retourné.');}).catch(()=>setStationsError('Impossible de charger les CIS.')).finally(()=>setStationsLoading(false));}}>🔄 Réessayer</button></div>:operationalStations.length===0?<div><p>⚠️ Aucun CIS disponible pour le moment.</p><button className="operatorPrimary" onClick={()=>window.location.reload()}>🔄 Recharger les centres</button></div>:<><div className="dispatchRequirement"><b>Indispensables :</b> {activeCall.scenario.requiredVehicles.join(' • ')||'À définir'}</div><div className="dispatchStations">{operationalStations.slice(0,60).map(st=>{const vehicles=st.fleet||[];const distance=Number(st.distanceToInterventionKm);return <div className="dispatchStation" key={st.id}><strong>{st.name}</strong>{Number.isFinite(distance)&&<small>📍 {distance < 1 ? Math.round(distance*1000)+' m' : distance.toFixed(1)+' km'} de l'intervention</small>}<div>{vehicles.map(v=>Array.from({length:v.count||1}).map((_,i)=><button key={v.type+i} onClick={()=>dispatchVehicle(st,v.type)}>+ {v.type}</button>))}</div></div>})}</div></>}</div>}
   {operatorPanel==='means' && <div className="operatorBody"><h3>📊 Moyens engagés</h3>{dispatchVehicles.length===0?<p>Aucun moyen engagé.</p>:dispatchVehicles.map(v=><div className="engagedVehicle" key={v.id}><b>🚒 {v.type}</b><span>{v.stationName}</span><em>{v.status}</em>{v.type==='VSAV'&&activeCall?.scenario.victimTransport?.transport_required&&<button onClick={()=>sendVsavToHospital(v)}>🏥 Transporter</button>}</div>)}</div>}
