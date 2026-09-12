@@ -209,7 +209,7 @@ export default function Home() {
   useEffect(() => {
     if (!selectedService) return;
     let cancelled = false;
-    const cacheKey = 'cta18-stations-' + selectedService.code;
+    const cacheKey = 'cta18-stations-v2-' + selectedService.code;
 
     const readCache = () => {
       try {
