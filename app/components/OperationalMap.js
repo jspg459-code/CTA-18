@@ -15,30 +15,10 @@ const stationIcon = L.divIcon({
 const hospitalIcon = L.divIcon({
   className: 'hospitalMarkerWrap',
   html: '<div class="hospitalMarker">🏥</div>',
-  iconSize: [15, 15],
-  iconAnchor: [7, 7],
-  popupAnchor: [0, -9],
+  iconSize: [18, 18],
+  iconAnchor: [9, 9],
+  popupAnchor: [0, -10],
 });
-
-function FitToStations({ stations, fallback }) {
-  const map = useMap();
-
-  useEffect(() => {
-    if (stations.length) {
-      const valid = stations.filter((station) => Number.isFinite(station.lat) && Number.isFinite(station.lon));
-      if (valid.length) {
-        map.fitBounds(valid.map((station) => [station.lat, station.lon]), {
-          padding: [28, 28],
-          maxZoom: 12,
-        });
-      }
-    } else {
-      map.setView([fallback.lat, fallback.lon], fallback.zoom || 9);
-    }
-  }, [stations, fallback, map]);
-
-  return null;
-}
 
 const vsavTransportIcon = L.divIcon({
   className: 'vsavTransportMarkerWrap',
@@ -48,63 +28,104 @@ const vsavTransportIcon = L.divIcon({
   popupAnchor: [0, -12],
 });
 
+function FitToStations({ stations, fallback }) {
+  const map = useMap();
+
+  useEffect(() => {
+    const valid = stations.filter((station) => Number.isFinite(station.lat) && Number.isFinite(station.lon));
+    if (valid.length) {
+      map.fitBounds(valid.map((station) => [station.lat, station.lon]), {
+        padding: [28, 28],
+        maxZoom: 12,
+      });
+    } else {
+      map.setView([fallback.lat, fallback.lon], fallback.zoom || 9);
+    }
+  }, [stations, fallback, map]);
+
+  return null;
+}
+
 function AllHospitals({ hospitals }) {
-  return (
-    <>
-      {hospitals.map((hospital) => (
-        <Marker key={hospital.id} position={[hospital.lat, hospital.lon]} icon={hospitalIcon}>
-          <Popup>
-            <strong>🏥 {hospital.name}</strong><br />
-            {hospital.address || 'Établissement hospitalier'}
-          </Popup>
-        </Marker>
-      ))}
-    </>
-  );
+  return hospitals.map((hospital) => (
+    <Marker key={hospital.id} position={[hospital.lat, hospital.lon]} icon={hospitalIcon}>
+      <Popup>
+        <strong>🏥 {hospital.name}</strong><br />
+        {hospital.address || 'Établissement hospitalier'}
+      </Popup>
+    </Marker>
+  ));
 }
 
 function AllStations({ stations, onStationSelect }) {
-  return (
-    <>
-      {stations.map((station, index) => (
-        <Marker
-          key={station.id || index}
-          position={[station.lat, station.lon]}
-          icon={stationIcon}
-          eventHandlers={{ click: () => onStationSelect?.(station) }}
-        >
-          <Popup>
-            <strong>{station.name}</strong><br />
-            {station.address || station.locality || 'Adresse en cours de référencement'}
-          </Popup>
-        </Marker>
-      ))}
-    </>
-  );
+  return stations.map((station, index) => (
+    <Marker
+      key={station.id || index}
+      position={[station.lat, station.lon]}
+      icon={stationIcon}
+      eventHandlers={{ click: () => onStationSelect?.(station) }}
+    >
+      <Popup>
+        <strong>{station.name}</strong><br />
+        {station.address || station.locality || 'Adresse en cours de référencement'}
+      </Popup>
+    </Marker>
+  ));
 }
 
 function VsavTransports({ transports, hospitals }) {
-  return (
-    <>
-      {transports.map((transport) => {
-        const hospital = hospitals.find(h => h.id === transport.hospitalId);
-        if (!hospital) return null;
-        return <Marker key={transport.id} position={[transport.lat, transport.lon]} icon={vsavTransportIcon}>
-          <Popup><strong>🚑 {transport.vehicleName}</strong><br />🏥 Transporte une victime vers : <b>{hospital.name}</b><br /><small>Statut : transport hospitalier</small></Popup>
-        </Marker>;
-      })}
-    </>
-  );
+  return transports.map((transport) => {
+    const hospital = hospitals.find((h) => h.id === transport.hospitalId);
+    if (!hospital) return null;
+    return (
+      <Marker key={transport.id} position={[transport.lat, transport.lon]} icon={vsavTransportIcon}>
+        <Popup>
+          <strong>🚑 {transport.vehicleName}</strong><br />
+          🏥 Transporte une victime vers : <b>{hospital.name}</b><br />
+          <small>Statut : transport hospitalier</small>
+        </Popup>
+      </Marker>
+    );
+  });
+}
+
+function buildHospitalQuery(stations, fallback) {
+  const valid = stations.filter((station) => Number.isFinite(station.lat) && Number.isFinite(station.lon));
+
+  if (!valid.length) {
+    const d = 0.22;
+    return `[out:json][timeout:25];(nwr["amenity"="hospital"](${fallback.lat-d},${fallback.lon-d},${fallback.lat+d},${fallback.lon+d});nwr["healthcare"="hospital"](${fallback.lat-d},${fallback.lon-d},${fallback.lat+d},${fallback.lon+d}););out center tags;`;
+  }
+
+  const lats = valid.map((s) => s.lat);
+  const lons = valid.map((s) => s.lon);
+  // On couvre tout le territoire réellement affiché, avec une petite marge.
+  const margin = 0.08;
+  const south = Math.max(-90, Math.min(...lats) - margin);
+  const west = Math.max(-180, Math.min(...lons) - margin);
+  const north = Math.min(90, Math.max(...lats) + margin);
+  const east = Math.min(180, Math.max(...lons) + margin);
+
+  return `[out:json][timeout:35];(nwr["amenity"="hospital"](${south},${west},${north},${east});nwr["healthcare"="hospital"](${south},${west},${north},${east}););out center tags;`;
 }
 
 export default function OperationalMap({ stations, fallback, onStationSelect, transports = [] }) {
   const center = useMemo(() => [fallback.lat, fallback.lon], [fallback]);
   const [hospitals, setHospitals] = useState([]);
 
+  const stationSignature = useMemo(
+    () => stations.map((s) => `${s.id || s.name}:${s.lat}:${s.lon}`).join('|'),
+    [stations]
+  );
+
   useEffect(() => {
     let cancelled = false;
-    const radius = fallback.zoom && fallback.zoom <= 8 ? 35000 : 18000;
-    const query = `[out:json][timeout:20];(nwr["amenity"="hospital"](around:${radius},${fallback.lat},${fallback.lon});nwr["healthcare"="hospital"](around:${radius},${fallback.lat},${fallback.lon}););out center tags;`;
+    if (!stations.length) {
+      setHospitals([]);
+      return () => { cancelled = true; };
+    }
+
+    const query = buildHospitalQuery(stations, fallback);
 
     fetch('https://overpass-api.de/api/interpreter', {
       method: 'POST',
@@ -114,37 +135,45 @@ export default function OperationalMap({ stations, fallback, onStationSelect, tr
       .then((response) => response.ok ? response.json() : Promise.reject(new Error('hospital source unavailable')))
       .then((data) => {
         if (cancelled) return;
+
         const unique = new Map();
         (data.elements || []).forEach((item) => {
           const lat = item.lat ?? item.center?.lat;
           const lon = item.lon ?? item.center?.lon;
           if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
-          const name = item.tags?.name || 'Hôpital';
+
+          const tags = item.tags || {};
+          const name = tags.name || tags['name:fr'] || 'Hôpital';
+          const address = [
+            tags['addr:housenumber'],
+            tags['addr:street'],
+            tags['addr:postcode'],
+            tags['addr:city'],
+          ].filter(Boolean).join(' ') || tags['addr:full'] || '';
+
           unique.set(item.type + '-' + item.id, {
             id: item.type + '-' + item.id,
             lat,
             lon,
             name,
-            address: [item.tags?.['addr:housenumber'], item.tags?.['addr:street'], item.tags?.['addr:postcode'], item.tags?.['addr:city']].filter(Boolean).join(' ') || item.tags?.['addr:full'] || '',
+            address,
           });
         });
+
         setHospitals([...unique.values()]);
       })
-      .catch(() => { if (!cancelled) setHospitals([]); });
+      .catch(() => {
+        if (!cancelled) setHospitals([]);
+      });
 
     return () => { cancelled = true; };
-  }, [fallback.lat, fallback.lon, fallback.zoom]);
+  }, [stationSignature, stations, fallback]);
 
   return (
     <div className="operationalMap">
-      <MapContainer
-        center={center}
-        zoom={fallback.zoom || 9}
-        scrollWheelZoom
-        className="leafletOperational"
-      >
+      <MapContainer center={center} zoom={fallback.zoom || 9} scrollWheelZoom className="leafletOperational">
         <TileLayer
-          attribution='&copy; OpenStreetMap contributors'
+          attribution="&copy; OpenStreetMap contributors"
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           maxZoom={19}
         />
