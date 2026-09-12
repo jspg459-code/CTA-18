@@ -165,7 +165,7 @@ export default function Home() {
   const [creatorOpen, setCreatorOpen] = useState(false);
   const [creatorTab, setCreatorTab] = useState('library');
   const [scenarios, setScenarios] = useState([]);
-  const [scenarioForm, setScenarioForm] = useState({ title:'', category:'SAP', difficulty:'Moyen', caller:'', description:'', questions:[{question:'Que s’est-il passé ?',answer:''}], requiredVehicles:[], recommendedVehicles:[], possibleReinforcements:[] });
+  const [scenarioForm, setScenarioForm] = useState({ title:'', category:'SAP', difficulty:'Moyen', caller:'', description:'', questions:[{question:'Que s’est-il passé ?',answer:''}], requiredVehicles:[], recommendedVehicles:[], possibleReinforcements:[],victimTransport:{has_victims:false,transport_required:false,transport_count:0,destination_type:'auto',notes:''} });
 
   const closeAuth = () => { setAuthMode(null); setAuthMessage(''); };
   const logout = () => { setSessionToken(null); setPlayer(null); setAuthMode(null); setAuthMessage(''); setServicePicker(false); setSelectedService(null); setSearch(''); };
@@ -176,7 +176,7 @@ export default function Home() {
     const response = await fetch(SUPABASE_URL + '/rest/v1/intervention_scenarios?select=*&order=created_at.desc',{headers:scenarioApiHeaders()});
     if (!response.ok) return;
     const rows = await response.json();
-    setScenarios(rows.map(s=>({id:s.id,title:s.title,category:s.category,difficulty:s.difficulty,caller:s.caller||'',description:s.description||'',questions:s.questions||[],requiredVehicles:s.required_vehicles||[],recommendedVehicles:s.recommended_vehicles||[],possibleReinforcements:s.possible_reinforcements||[],status:s.status,createdAt:s.created_at,createdBy:s.created_by_email})));
+    setScenarios(rows.map(s=>({id:s.id,title:s.title,category:s.category,difficulty:s.difficulty,caller:s.caller||'',description:s.description||'',questions:s.questions||[],requiredVehicles:s.required_vehicles||[],recommendedVehicles:s.recommended_vehicles||[],possibleReinforcements:s.possible_reinforcements||[],victimTransport:s.victim_transport||{has_victims:false,transport_required:false,transport_count:0,destination_type:'auto',notes:''},status:s.status,createdAt:s.created_at,createdBy:s.created_by_email})));
   };
   useEffect(()=>{loadScenarios();},[sessionToken]);
 
@@ -191,14 +191,14 @@ export default function Home() {
       title:scenarioForm.title, category:scenarioForm.category, difficulty:scenarioForm.difficulty,
       caller:scenarioForm.caller, description:scenarioForm.description, questions:scenarioForm.questions,
       required_vehicles:scenarioForm.requiredVehicles, recommended_vehicles:scenarioForm.recommendedVehicles,
-      possible_reinforcements:scenarioForm.possibleReinforcements, status:'Disponible',
+      possible_reinforcements:scenarioForm.possibleReinforcements, victim_transport:scenarioForm.victimTransport, status:'Disponible',
       created_by_email:player?.email || null
     };
     const response = await fetch(SUPABASE_URL + '/rest/v1/intervention_scenarios', {
       method:'POST', headers:{...scenarioApiHeaders(), Prefer:'return=representation'}, body:JSON.stringify(payload)
     });
     if (!response.ok) { alert('Impossible d’enregistrer le scénario dans la base centrale.'); return; }
-    setScenarioForm({title:'',category:'SAP',difficulty:'Moyen',caller:'',description:'',questions:[{question:'Que s’est-il passé ?',answer:''}],requiredVehicles:[],recommendedVehicles:[],possibleReinforcements:[]});
+    setScenarioForm({title:'',category:'SAP',difficulty:'Moyen',caller:'',description:'',questions:[{question:'Que s’est-il passé ?',answer:''}],requiredVehicles:[],recommendedVehicles:[],possibleReinforcements:[],victimTransport:{has_victims:false,transport_required:false,transport_count:0,destination_type:'auto',notes:''}});
     await loadScenarios();
     setCreatorTab('library');
   };
@@ -332,7 +332,16 @@ export default function Home() {
         <div className="scenarioCreatorForm">
           <div className="formSection"><h3>🚨 Identité du scénario</h3><div className="creatorGrid"><label>Nom<input value={scenarioForm.title} onChange={e=>setScenarioForm({...scenarioForm,title:e.target.value})}/></label><label>Catégorie<select value={scenarioForm.category} onChange={e=>setScenarioForm({...scenarioForm,category:e.target.value})}><option>SAP</option><option>AVP</option><option>INC</option><option>DIV</option><option>RCH</option><option>Sauvetage</option></select></label><label>Difficulté<select value={scenarioForm.difficulty} onChange={e=>setScenarioForm({...scenarioForm,difficulty:e.target.value})}><option>Facile</option><option>Moyen</option><option>Difficile</option><option>Critique</option></select></label><label>Appelant<input value={scenarioForm.caller} onChange={e=>setScenarioForm({...scenarioForm,caller:e.target.value})}/></label></div><label className="fullLabel">Description<textarea value={scenarioForm.description} onChange={e=>setScenarioForm({...scenarioForm,description:e.target.value})}/></label></div>
           <div className="formSection"><h3>📞 Questions / réponses</h3>{scenarioForm.questions.map((q,i)=><div className="qaRow" key={i}><input value={q.question} onChange={e=>updateScenarioQuestion(i,'question',e.target.value)} placeholder="Question CTA"/><input value={q.answer} onChange={e=>updateScenarioQuestion(i,'answer',e.target.value)} placeholder="Réponse appelant"/></div>)}<button className="secondaryButton" onClick={addScenarioQuestion}>+ Ajouter une question</button></div>
-          <div className="formSection"><h3>🚒 Moyens opérationnels</h3><p className="formHint">Les moyens manquants peuvent rallonger l'intervention ou provoquer une demande automatique de renfort.</p><div className="vehicleRuleGrid">{[['requiredVehicles','🔴 Indispensables','Absents : renfort automatique'],['recommendedVehicles','🟠 Recommandés','Absents : intervention plus longue'],['possibleReinforcements','🔵 Renforts possibles','Selon évolution']].map(([field,title,desc])=><div className="vehicleRule" key={field}><h4>{title}</h4><p>{desc}</p>{vehicleTypes.map(v=><button type="button" key={v} className={scenarioForm[field].includes(v)?'selected':''} onClick={()=>toggleScenarioVehicle(field,v)}>{v}</button>)}</div>)}</div></div>
+          <div className="formSection"><h3>🏥 Victimes et transport hospitalier</h3>
+<p className="formHint">Chaque scénario définit clairement si des victimes doivent être transportées ou non.</p>
+<div className="creatorGrid">
+<label>Y a-t-il des victimes ?<select value={scenarioForm.victimTransport.has_victims?'yes':'no'} onChange={e=>setScenarioForm({...scenarioForm,victimTransport:{...scenarioForm.victimTransport,has_victims:e.target.value==='yes',transport_required:e.target.value==='yes'?scenarioForm.victimTransport.transport_required:false,transport_count:e.target.value==='yes'?scenarioForm.victimTransport.transport_count:0}})}><option value="no">Non</option><option value="yes">Oui</option></select></label>
+{scenarioForm.victimTransport.has_victims && <><label>Transport nécessaire ?<select value={scenarioForm.victimTransport.transport_required?'yes':'no'} onChange={e=>setScenarioForm({...scenarioForm,victimTransport:{...scenarioForm.victimTransport,transport_required:e.target.value==='yes'}})}><option value="no">❌ Aucun transport</option><option value="yes">🏥 Transport vers un hôpital</option></select></label>
+{scenarioForm.victimTransport.transport_required && <><label>Nombre de victimes à transporter<input type="number" min="1" value={scenarioForm.victimTransport.transport_count} onChange={e=>setScenarioForm({...scenarioForm,victimTransport:{...scenarioForm.victimTransport,transport_count:Number(e.target.value)}})}/></label><label>Destination<select value={scenarioForm.victimTransport.destination_type} onChange={e=>setScenarioForm({...scenarioForm,victimTransport:{...scenarioForm.victimTransport,destination_type:e.target.value}})}><option value="auto">Hôpital adapté automatiquement</option><option value="nearest">Hôpital le plus proche</option></select></label></>}</>}
+</div>
+{scenarioForm.victimTransport.has_victims && <label className="fullLabel">Consignes médicales / transport<textarea value={scenarioForm.victimTransport.notes} onChange={e=>setScenarioForm({...scenarioForm,victimTransport:{...scenarioForm.victimTransport,notes:e.target.value}})} placeholder="Ex. victime consciente, bilan médical, transport nécessaire ou maintien sur place..."/></label>}
+</div>
+<div className="formSection"><h3>🚒 Moyens opérationnels</h3><p className="formHint">Les moyens manquants peuvent rallonger l'intervention ou provoquer une demande automatique de renfort.</p><div className="vehicleRuleGrid">{[['requiredVehicles','🔴 Indispensables','Absents : renfort automatique'],['recommendedVehicles','🟠 Recommandés','Absents : intervention plus longue'],['possibleReinforcements','🔵 Renforts possibles','Selon évolution']].map(([field,title,desc])=><div className="vehicleRule" key={field}><h4>{title}</h4><p>{desc}</p>{vehicleTypes.map(v=><button type="button" key={v} className={scenarioForm[field].includes(v)?'selected':''} onClick={()=>toggleScenarioVehicle(field,v)}>{v}</button>)}</div>)}</div></div>
           <div className="scenarioSaveBar"><button className="saveScenarioButton" onClick={saveScenario}>💾 Enregistrer dans la base centrale</button></div>
         </div>}
       </div>
