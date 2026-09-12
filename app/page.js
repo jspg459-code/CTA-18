@@ -347,12 +347,12 @@ export default function Home() {
     setTransportStatus(null);
   };
 
-const operatorConsole = selectedService ? <div className="operatorConsole">
+const operatorConsole = selectedService ? <div className="operatorConsoleInline">
   <div className="operatorHeader"><div><span className="authTag">POSTE OPÉRATEUR CTA</span><h2>Console opérationnelle</h2></div><div className="operatorStatus">{activeCall ? '🔴 '+activeCall.status : '🟢 EN ATTENTE D’ALERTE'}</div></div>
   <div className="operatorTabs"><button className={operatorPanel==='calls'?'active':''} onClick={()=>setOperatorPanel('calls')}>📞 Appels</button><button className={operatorPanel==='call'?'active':''} onClick={()=>setOperatorPanel('call')}>🎧 Appel en cours</button><button className={operatorPanel==='dispatch'?'active':''} onClick={()=>setOperatorPanel('dispatch')}>🚒 Engagement</button><button className={operatorPanel==='means'?'active':''} onClick={()=>setOperatorPanel('means')}>📊 Moyens</button><button className={operatorPanel==='hospital'?'active':''} onClick={()=>setOperatorPanel('hospital')}>🏥 Transports</button></div>
   {operatorPanel==='calls' && <div className="operatorBody"><h3>📞 Déclencher un scénario de test</h3><div className="scenarioLaunchGrid">{scenarios.map(s=><button key={s.id} className="launchScenario" onClick={()=>startScenario(s)}><b>{s.category}</b><strong>{s.title}</strong><small>{s.difficulty} • {s.victimTransport?.has_victims?'Victime(s)':'Sans victime'}</small></button>)}</div>{scenarios.length===0&&<p>Aucun scénario disponible.</p>}</div>}
   {operatorPanel==='call' && <div className="operatorBody">{!activeCall?<div className="operatorEmpty">Aucun appel actif.</div>:<><div className="callCard"><span>📞 APPELANT</span><h3>{activeCall.scenario.caller||'Témoin'}</h3><p>{activeCall.scenario.description}</p></div>{activeCall.scenario.questions?.length>0&&<div className="qaOperator"><div><span>QUESTION {callQuestionIndex+1}/{activeCall.scenario.questions.length}</span><h3>{activeCall.scenario.questions[callQuestionIndex].question}</h3><p>Réponse : {activeCall.scenario.questions[callQuestionIndex].answer||'À préciser'}</p></div><div className="qaControls"><button disabled={callQuestionIndex===0} onClick={()=>setCallQuestionIndex(i=>i-1)}>←</button><button disabled={callQuestionIndex>=activeCall.scenario.questions.length-1} onClick={()=>setCallQuestionIndex(i=>i+1)}>→</button></div></div>}<button className="operatorPrimary" onClick={()=>setOperatorPanel('dispatch')}>🚒 Passer à l'engagement des moyens</button></>}</div>}
-  {operatorPanel==='dispatch' && <div className="operatorBody"><h3>🚒 Engager les moyens</h3>{!activeCall?<p>Aucune intervention sélectionnée.</p>:<><div className="dispatchRequirement"><b>Indispensables :</b> {activeCall.scenario.requiredVehicles.join(' • ')||'À définir'}</div><div className="dispatchStations">{operationalStations.slice(0,60).map(st=>{const vehicles=st.vehicles||[];return <div className="dispatchStation" key={st.id}><strong>{st.name}</strong><div>{vehicles.map(v=>Array.from({length:v.count||1}).map((_,i)=><button key={v.type+i} onClick={()=>dispatchVehicle(st,v.type)}>+ {v.type}</button>))}</div></div>})}</div></>}</div>}
+  {operatorPanel==='dispatch' && <div className="operatorBody"><h3>🚒 Engager les moyens</h3>{!activeCall?<p>Aucune intervention sélectionnée.</p>:<><div className="dispatchRequirement"><b>Indispensables :</b> {activeCall.scenario.requiredVehicles.join(' • ')||'À définir'}</div><div className="dispatchStations">{operationalStations.slice(0,60).map(st=>{const vehicles=st.fleet||[];return <div className="dispatchStation" key={st.id}><strong>{st.name}</strong><div>{vehicles.map(v=>Array.from({length:v.count||1}).map((_,i)=><button key={v.type+i} onClick={()=>dispatchVehicle(st,v.type)}>+ {v.type}</button>))}</div></div>})}</div></>}</div>}
   {operatorPanel==='means' && <div className="operatorBody"><h3>📊 Moyens engagés</h3>{dispatchVehicles.length===0?<p>Aucun moyen engagé.</p>:dispatchVehicles.map(v=><div className="engagedVehicle" key={v.id}><b>🚒 {v.type}</b><span>{v.stationName}</span><em>{v.status}</em>{v.type==='VSAV'&&activeCall?.scenario.victimTransport?.transport_required&&<button onClick={()=>sendVsavToHospital(v)}>🏥 Transporter</button>}</div>)}</div>}
   {operatorPanel==='hospital' && <div className="operatorBody"><h3>🏥 Gestion des transports</h3>{!activeCall?<p>Aucune intervention.</p>:!activeCall.scenario.victimTransport?.has_victims?<p>Ce scénario ne comporte aucune victime.</p>:!activeCall.scenario.victimTransport?.transport_required?<div className="transportInfo">🟢 Victime(s) prise(s) en charge — <b>aucun transport hospitalier prévu.</b></div>:<><div className="transportInfo">🚑 {activeCall.scenario.victimTransport.transport_count} victime(s) à transporter • Destination : {activeCall.scenario.victimTransport.destination_type==='nearest'?'hôpital le plus proche':'hôpital adapté automatiquement'}</div>{dispatchVehicles.filter(v=>v.type==='VSAV').map(v=><div className="engagedVehicle" key={v.id}><b>🚑 VSAV</b><span>{v.stationName}</span><em>{v.status}</em>{v.status==='TRANSPORT HÔPITAL'?<button onClick={()=>returnVsavToCis(v)}>↩️ Retour CIS</button>:<button onClick={()=>sendVsavToHospital(v)}>🏥 Envoyer à l'hôpital</button>}</div>)}</>}</div>}
 </div> : null;
@@ -384,7 +384,7 @@ const operatorConsole = selectedService ? <div className="operatorConsole">
   ) : null;
 
   return (
-    <main className="site">{creatorModal}{operatorConsole}
+    <main className="site">{creatorModal}
       <header className="top"><div className="wrap navWrap">
         <a className="brand" href="#home" onClick={() => { closeAuth(); setServicePicker(false); setSelectedService(null); }}><span className="shield">18</span><span>CTA <b>18</b></span></a>
         <div className="account">{player ? <>{creatorAuthorized && <button type="button" className="creatorNavButton" onClick={() => setCreatorOpen(true)}>👑 Créateur</button>}<span className="playerName">👤 {playerName}</span><button type="button" className="logout" onClick={logout}>Déconnexion</button></> : <><button type="button" onClick={() => setAuthMode('login')}>Connexion</button><button type="button" className="signup" onClick={() => setAuthMode('signup')}>Inscription</button></>}</div>
@@ -393,15 +393,6 @@ const operatorConsole = selectedService ? <div className="operatorConsole">
       {player ? (
         selectedService ? (
           <section className="ctaDashboard ctaCommandStyle">
-            <header className="ctaPompiersBar">
-              <div className="ctaPompiersBrand"><span className="brandFlame">🔥</span><b>CTA</b><span>POMPIER</span></div>
-              <div className="ctaAgentBar">
-                <span className="agentPhone">📞</span><span>Disponible</span><i></i><span className="agentCaret">⌄</span>
-              </div>
-              <div className="ctaBarStats"><span>◉ 22170</span><span>▣ {Object.values(fleetTotals).reduce((sum, value) => sum + value, 0)}</span><span>♙ {playerName}</span></div>
-              <button className="changeTerritory" type="button" onClick={() => setServicePicker(true)}>↪</button>
-            </header>
-
             <div className="ctaStatusStrip">
               <div><b>{new Date().toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long', year:'numeric' }).toUpperCase()}</b><small>CTA 18 • simulation opérationnelle</small></div>
               <span><i className="legendDot green"></i> Intervention(s) au total: <b>0</b></span>
@@ -414,6 +405,7 @@ const operatorConsole = selectedService ? <div className="operatorConsole">
             <section className="ctaMapCommand">
               <div className="commandMapToolbar">
                 <div className="mapToolGroup">
+                  <button className={ctaView === 'console' ? 'active' : ''} type="button" onClick={() => setCtaView('console')}>Console opérationnelle</button>
                   <button className={ctaView === 'map' ? 'active' : ''} type="button" onClick={() => setCtaView('map')}>Cartographie</button>
                   <button className={ctaView === 'operations' ? 'active' : ''} type="button" onClick={() => setCtaView('operations')}>Synoptique des opérations</button>
                   <button className={ctaView === 'activeInterventions' ? 'active' : ''} type="button" onClick={() => setCtaView('activeInterventions')}>Interventions en cours <span className="menuCounter">0</span></button>
@@ -433,7 +425,7 @@ const operatorConsole = selectedService ? <div className="operatorConsole">
               </div>
 
               <div className="commandMapArea">
-                {ctaView === 'map' ? <>
+                {ctaView === 'console' ? operatorConsole : ctaView === 'map' ? <>
                   <OperationalMap
                     stations={operationalStations}
                     fallback={{ lat: 46.603354, lon: 1.888334, zoom: 6 }}
