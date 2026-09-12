@@ -271,7 +271,7 @@ export default function Home() {
   useEffect(() => {
     if (!selectedService) return;
     let cancelled = false;
-    const cacheKey = 'cta18-stations-v5-' + selectedService.code;
+    const cacheKey = 'cta18-stations-v6-' + selectedService.code;
 
     const readCache = () => {
       try {
@@ -294,7 +294,7 @@ export default function Home() {
         // URL stable : permet au navigateur et au CDN Vercel de réutiliser le cache.
         // L'ancienne version ajoutait un timestamp et forçait une requête Overpass complète à chaque ouverture.
         const response = await fetch(
-          '/api/stations?code=' + encodeURIComponent(selectedService.code) + '&v=2',
+          '/api/stations?code=' + encodeURIComponent(selectedService.code) + '&v=3',
           { cache: 'no-store' }
         );
 
