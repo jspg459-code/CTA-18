@@ -24,3 +24,5 @@ footer{background:#171c23;color:#a8b0b8}.footerWrap{padding:28px 0;display:flex;
 .authCard form{display:flex;flex-direction:column}.authCard label{font-size:11px;font-weight:800;color:#4b5660;margin:13px 0 7px}.authCard input{width:100%;border:1px solid #d9dfe5;border-radius:7px;padding:15px;font:14px Inter;outline:none}.authCard input:focus{border-color:var(--red);box-shadow:0 0 0 3px #e2343215}
 .authSubmit{border:0;background:var(--red);color:#fff;border-radius:7px;padding:16px;margin-top:24px;font:800 12px Inter;letter-spacing:.04em;cursor:pointer;box-shadow:0 10px 24px #d9343333}.authSwitch{text-align:center;color:#78838d;font-size:12px;margin:24px 0 0}.authSwitch button{border:0;background:none;color:var(--red);font-weight:800;cursor:pointer}
 @media(max-width:620px){.authCard{padding:27px 22px}.authCard h1{font-size:38px}.authPage{min-height:calc(100vh - 66px)}}
+
+.authMessage{text-align:center;margin:16px 0 0;padding:11px;border-radius:7px;background:#eef6f0;color:#397247;font-size:12px;line-height:1.5}.authSubmit:disabled{opacity:.65;cursor:not-allowed}
