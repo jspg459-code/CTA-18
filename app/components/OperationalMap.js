@@ -72,7 +72,7 @@ function MovingVehicles({ vehicles = [], activeIntervention }) {
   return vehicles.map(vehicle=><RoutedVehicle key={vehicle.id} vehicle={vehicle} activeIntervention={activeIntervention} now={now}/>);
 }
 
-export default function OperationalMap({ stations = [], fallback, onStationSelect, activeIntervention = null, vehicles = [] }) {
+export default function OperationalMap({ stations = [], fallback, onStationSelect, activeIntervention = null, vehicles = [], callAccepted = false, onTakeCall, onRefuseCall }) {
   const center = useMemo(() => [fallback.lat, fallback.lon], [fallback]);
   const [hospitals, setHospitals] = useState([]);
   const [hospitalsLoading, setHospitalsLoading] = useState(false);
@@ -128,7 +128,20 @@ export default function OperationalMap({ stations = [], fallback, onStationSelec
         ))}
         {activeIntervention && validPoint(activeIntervention.lat,activeIntervention.lon) && (
           <Marker position={[Number(activeIntervention.lat),Number(activeIntervention.lon)]} icon={interventionIcon}>
-            <Popup><strong>🚨 Intervention en cours</strong><br/>{activeIntervention.scenario?.title || 'Intervention'}<br/>📍 {activeIntervention.address || 'Localisation opérationnelle'}</Popup>
+            <Popup className="incomingCallPopup">
+              {!callAccepted ? <div className="incomingCallCard">
+                <span className="incomingCallLabel">📞 APPEL ENTRANT</span>
+                <strong>Appels vers 18 / 112</strong>
+                <p>{activeIntervention.scenario?.title || 'Nouvelle intervention'}</p>
+                <small>📍 {activeIntervention.address || 'Localisation opérationnelle'}</small>
+                <div className="incomingCallActions">
+                  <button type="button" onClick={onTakeCall}>Prendre l'appel</button>
+                  <button type="button" onClick={onRefuseCall}>Refuser l'appel</button>
+                </div>
+              </div> : <div>
+                <strong>🚨 Intervention en cours</strong><br/>{activeIntervention.scenario?.title || 'Intervention'}<br/>📍 {activeIntervention.address || 'Localisation opérationnelle'}
+              </div>}
+            </Popup>
           </Marker>
         )}
         <MovingVehicles vehicles={vehicles} activeIntervention={activeIntervention}/>
