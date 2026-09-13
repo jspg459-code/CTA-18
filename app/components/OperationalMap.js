@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 
@@ -21,22 +21,47 @@ const transportIcon = icon('vsavTransportMarkerWrap', '🚑', [24,24]);
 const validPoint = (lat, lon) => Number.isFinite(Number(lat)) && Number.isFinite(Number(lon));
 const lerp = (a, b, t) => Number(a) + (Number(b) - Number(a)) * t;
 
-function FitToOperationalPoints({ stations, hospitals, fallback, activeIntervention, vehicles }) {
+function FitToOperationalPoints({ stations, hospitals, fallback, activeIntervention }) {
   const map = useMap();
   useEffect(() => {
+    // Au repos, on cadre les CIS du territoire. Dès qu'un appel ou une intervention est actif,
+    // on laisse le suivi opérationnel gérer la caméra pour éviter les retours en arrière.
+    if (activeIntervention) return;
     const points = [
       ...stations.map(s => ({lat:Number(s.lat), lon:Number(s.lon)})),
       ...hospitals.map(h => ({lat:Number(h.lat), lon:Number(h.lon)})),
-      ...(activeIntervention && validPoint(activeIntervention.lat, activeIntervention.lon) ? [{lat:Number(activeIntervention.lat), lon:Number(activeIntervention.lon)}] : []),
-      ...(vehicles || []).map(v => ({lat:Number(v.lat), lon:Number(v.lon)})),
     ].filter(p => validPoint(p.lat,p.lon));
 
     if (points.length) map.fitBounds(points.map(p => [p.lat,p.lon]), {padding:[28,28], maxZoom:12});
     else map.setView([fallback.lat,fallback.lon], fallback.zoom || 9);
-  }, [stations, hospitals, fallback, activeIntervention, vehicles, map]);
+  }, [stations, hospitals, fallback, activeIntervention, map]);
   return null;
 }
 
+function AutoFocusEngagement({ vehicles = [], activeIntervention }) {
+  const map = useMap();
+  const lastKeyRef = useRef('');
+
+  useEffect(() => {
+    if (!vehicles.length) return;
+    const first = vehicles[0];
+    const key = vehicles.map(v => String(v.id)+':'+String(v.startedAt||'')).join('|');
+    if (lastKeyRef.current === key) return;
+    lastKeyRef.current = key;
+
+    const origin = [Number(first.originLat ?? first.lat), Number(first.originLon ?? first.lon)];
+    const target = [Number(first.targetLat ?? activeIntervention?.lat), Number(first.targetLon ?? activeIntervention?.lon)];
+    if (!validPoint(origin[0],origin[1]) || !validPoint(target[0],target[1])) return;
+
+    // Un seul zoom pour tout le départ : le premier véhicule engagé sert de référence.
+    const timer = setTimeout(() => {
+      map.flyToBounds([origin,target], {padding:[70,70], maxZoom:13, duration:1.1});
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [vehicles, activeIntervention, map]);
+
+  return null;
+}
 function RoutedVehicle({ vehicle, activeIntervention, now }) {
   const fromLat=Number(vehicle.originLat ?? vehicle.lat), fromLon=Number(vehicle.originLon ?? vehicle.lon);
   const toLat=Number(vehicle.targetLat ?? activeIntervention?.lat ?? vehicle.lat), toLon=Number(vehicle.targetLon ?? activeIntervention?.lon ?? vehicle.lon);
@@ -115,7 +140,8 @@ export default function OperationalMap({ stations = [], fallback, onStationSelec
     <div className="operationalMap">
       <MapContainer center={center} zoom={fallback.zoom || 9} scrollWheelZoom className="leafletOperational">
         <TileLayer attribution="&copy; OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" maxZoom={19}/>
-        <FitToOperationalPoints stations={stations} hospitals={hospitals} fallback={fallback} activeIntervention={activeIntervention} vehicles={vehicles}/>
+        <FitToOperationalPoints stations={stations} hospitals={hospitals} fallback={fallback} activeIntervention={activeIntervention}/>
+        <AutoFocusEngagement vehicles={vehicles} activeIntervention={activeIntervention}/>
         {stations.filter(s => validPoint(s.lat,s.lon)).map((station,index) => (
           <Marker key={station.id||index} position={[Number(station.lat),Number(station.lon)]} icon={stationIcon} eventHandlers={{click:()=>onStationSelect?.(station)}}>
             <Popup><strong>{station.name}</strong><br/>{station.address || station.locality || 'Adresse référencée'}</Popup>
