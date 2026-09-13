@@ -389,3 +389,53 @@ footer{background:#171c23;color:#a8b0b8}.footerWrap{padding:28px 0;display:flex;
   }
   .commandMapToolbar .selectedSdisBadge strong{font-size:12px!important;}
 }
+
+
+/* Engagement opérationnel — tableau CTA 18 */
+.dispatchWorkspace{background:#0f1a23!important}
+.dispatchTitleRow{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;margin-bottom:20px}
+.dispatchTitleRow h3{margin:6px 0 5px!important;font-size:25px}
+.dispatchTitleRow p{margin:0;color:#9eb0ba;font-size:12px}
+.dispatchLiveBadge{background:#172a35;border:1px solid #314b58;color:#ffaaa4;padding:9px 12px;border-radius:7px;font-size:10px;font-weight:900;white-space:nowrap}
+.dispatchBriefGrid{display:grid;grid-template-columns:1.15fr .85fr;gap:12px;margin-bottom:14px}
+.dispatchBriefCard{background:#15232d;border:1px solid #2a414d;border-radius:10px;padding:15px}
+.dispatchBriefCard h4{margin:0 0 10px;color:#8da1ac;font-size:11px;text-transform:uppercase;letter-spacing:.08em}
+.dispatchBriefCard>strong{font-size:17px;color:#f0f4f6}
+.dispatchBriefCard p{margin:7px 0;color:#a7b5bd;font-size:12px}
+.dispatchBriefCard.required{border-left:4px solid #dc4740}
+.dispatchBriefCard small{display:block;margin-top:12px;color:#81939e;font-size:10px}
+.dispatchBriefTags,.requiredVehicleList{display:flex;flex-wrap:wrap;gap:6px}
+.dispatchBriefTags span,.requiredVehicleList b{padding:5px 8px;border-radius:5px;background:#203542;color:#c7d4da;font-size:10px}
+.requiredVehicleList b{background:#482724;color:#ffb1a9}
+.dispatchFilterBar{display:flex;align-items:center;gap:7px;padding:10px 0;border-bottom:1px solid #2a3e49}
+.dispatchFilterBar button{padding:8px 11px;border-radius:6px;border:1px solid #344b57;background:#152530;color:#b7c5cc;font-size:10px;font-weight:800}
+.dispatchFilterBar button.active{background:#d94740;border-color:#d94740;color:#fff}
+.dispatchFilterBar span{margin-left:auto;color:#7e939e;font-size:10px;font-weight:800}
+.dispatchTable{margin-top:12px;border:1px solid #2b414d;border-radius:10px;overflow:hidden;background:#111d26}
+.dispatchTableHead,.dispatchTableRow{display:grid;grid-template-columns:minmax(190px,2.1fr) minmax(95px,.9fr) minmax(105px,.9fr) 80px 80px 90px;gap:10px;align-items:center}
+.dispatchTableHead{padding:10px 13px;background:#172630;color:#8fa3ad;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.06em}
+.dispatchTableRow{padding:11px 13px;border-top:1px solid #263b46;min-height:64px}
+.dispatchTableRow:hover{background:#162631}
+.dispatchTableRow.requiredRow{background:linear-gradient(90deg,rgba(71,111,83,.18),transparent)}
+.dispatchTableRow>div{min-width:0}
+.dispatchTableRow b{display:block;color:#e7eef2;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dispatchTableRow small{display:block;color:#78909b;font-size:9px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vehicleChip{font-size:10px!important;padding:7px 8px;background:#19323d;border:1px solid #31515e;border-radius:6px;display:inline-block!important;width:max-content;white-space:nowrap}
+.dispatchRole{font-size:10px;font-weight:800;color:#85aab8}
+.dispatchRole.critical{color:#ff9e96}.dispatchRole.recommended{color:#f2c56c}
+.dispatchTableRow>span:not(.dispatchRole){font-size:10px;color:#c0cbd1}
+.dispatchSendButton{padding:8px 10px;border:0;border-radius:6px;background:#d94740;color:#fff;font-size:10px;font-weight:900;cursor:pointer}
+.dispatchSendButton:hover{background:#ee5951}
+.dispatchBottomBar{margin-top:14px;padding:13px 14px;border:1px solid #2b414d;background:#14222c;border-radius:9px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.dispatchBottomBar b{display:block;font-size:12px}.dispatchBottomBar span{display:block;margin-top:3px;color:#8ea0aa;font-size:10px}
+.dispatchBottomBar .operatorPrimary{white-space:nowrap}
+@media(max-width:800px){
+  .dispatchBriefGrid{grid-template-columns:1fr}
+  .dispatchFilterBar{overflow-x:auto}.dispatchFilterBar button{white-space:nowrap}.dispatchFilterBar span{display:none}
+  .dispatchTable{overflow-x:auto}.dispatchTableHead,.dispatchTableRow{min-width:700px}
+}
+@media(max-width:600px){
+  .dispatchTitleRow{flex-direction:column;gap:8px}.dispatchLiveBadge{align-self:flex-start}
+  .dispatchBottomBar{flex-direction:column;align-items:stretch}
+  .dispatchBottomBar .operatorPrimary{width:100%}
+}
