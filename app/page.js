@@ -16,6 +16,33 @@ const departments = [
 ].map(([code,name]) => ({code,name}));
 
 
+const DEPARTMENT_CENTERS = {
+'01':[46.205,5.225],'02':[49.563,3.627],'03':[46.566,3.333],'04':[44.093,6.237],'05':[44.558,6.079],
+'06':[43.710,7.262],'07':[44.735,4.599],'08':[49.773,4.720],'09':[42.963,1.605],'10':[48.297,4.074],
+'11':[43.215,2.352],'12':[44.351,2.575],'13':[43.529,5.447],'14':[49.182,-0.371],'15':[45.044,3.097],
+'16':[45.648,0.156],'17':[46.160,-1.151],'18':[47.082,2.398],'19':[45.267,1.772],'21':[47.322,5.041],
+'22':[48.514,-2.765],'23':[46.171,1.872],'24':[45.185,0.721],'25':[47.237,6.024],'26':[44.933,4.893],
+'27':[49.024,1.151],'28':[48.446,1.489],'29':[48.390,-4.486],'30':[43.837,4.360],'31':[43.604,1.444],
+'32':[43.647,0.586],'33':[44.838,-0.579],'34':[43.611,3.877],'35':[48.117,-1.677],'36':[46.812,1.694],
+'37':[47.394,0.684],'38':[45.188,5.724],'39':[46.673,5.555],'40':[43.891,-0.500],'41':[47.586,1.335],
+'42':[45.439,4.389],'43':[45.043,3.885],'44':[47.218,-1.554],'45':[47.903,1.909],'46':[44.447,1.442],
+'47':[44.204,0.621],'48':[44.518,3.501],'49':[47.473,-0.551],'50':[49.114,-1.090],'51':[49.258,4.031],
+'52':[48.111,5.141],'53':[48.070,-0.773],'54':[48.693,6.184],'55':[48.773,5.161],'56':[47.658,-2.760],
+'57':[49.119,6.176],'58':[47.024,3.164],'59':[50.629,3.057],'60':[49.430,2.080],'61':[48.000,0.200],
+'62':[50.291,2.777],'63':[45.777,3.087],'64':[43.295,-0.370],'65':[43.233,0.072],'66':[42.699,2.895],
+'67':[48.584,7.750],'68':[47.750,7.335],'69':[45.764,4.835],'70':[47.624,6.155],'71':[46.307,4.828],
+'72':[48.007,0.200],'73':[45.565,5.918],'74':[45.899,6.129],'75':[48.857,2.352],'76':[49.443,1.099],
+'77':[48.540,2.660],'78':[48.804,2.134],'79':[46.323,-0.464],'80':[49.894,2.295],'81':[43.929,2.148],
+'82':[44.018,1.355],'83':[43.126,5.930],'84':[44.056,5.049],'85':[46.670,-1.426],'86':[46.581,0.340],
+'87':[45.834,1.262],'88':[48.173,6.450],'89':[47.798,3.573],'90':[47.638,6.863],'91':[48.632,2.444],
+'92':[48.892,2.206],'93':[48.909,2.448],'94':[48.790,2.465],'95':[49.036,2.077]
+};
+
+const departmentCenter = (code) => {
+  const p = DEPARTMENT_CENTERS[code] || [46.603354,1.888334];
+  return {lat:p[0],lon:p[1],zoom:9};
+};
+
 const LOCAL_STATION_FALLBACKS = {
   '59': [
     {id:'fallback-lille',name:'CIS Lille',address:'Lille',lat:50.6292,lon:3.0573},
@@ -36,7 +63,16 @@ const LOCAL_STATION_FALLBACKS = {
 
 const fallbackStationsFor = (code) => {
   if (LOCAL_STATION_FALLBACKS[code]) return LOCAL_STATION_FALLBACKS[code];
-  return [];
+  const center=departmentCenter(code);
+  const label=departments.find(d=>d.code===code)?.name||('Département '+code);
+  const offsets=[[0,0],[0.025,0.03],[-0.022,0.028],[0.03,-0.025],[-0.028,-0.02]];
+  return offsets.map((o,i)=>({
+    id:'fallback-'+code+'-'+i,
+    name:i===0?'CIS principal — '+label:'CIS '+label+' '+(i+1),
+    address:label,
+    lat:center.lat+o[0],
+    lon:center.lon+o[1]
+  }));
 };
 
 const fallbackScenarios = [
@@ -83,8 +119,42 @@ export default function Home(){
   const [selectedVehicles,setSelectedVehicles]=useState([]);
   const [engagedVehicles,setEngagedVehicles]=useState([]);
   const [activeTab,setActiveTab]=useState('map');
+  const [creatorMode,setCreatorMode]=useState(false);
+  const [creatorForm,setCreatorForm]=useState({title:'',category:'SAP',difficulty:'Moyen',caller:'',description:'',questionsText:'',requiredVehicles:'VSAV',recommendedVehicles:''});
+  const [creatorMessage,setCreatorMessage]=useState('');
 
   const headers=()=>({'Content-Type':'application/json',apikey:SUPABASE_KEY,Authorization:'Bearer '+sessionToken});
+
+  useEffect(()=>{
+    try{
+      const local=JSON.parse(localStorage.getItem('cta18_creator_scenarios')||'[]');
+      if(Array.isArray(local)&&local.length) setScenarios(list=>[...local,...list.filter(x=>!local.some(y=>String(y.id)===String(x.id)))]);
+    }catch{}
+  },[]);
+
+  const saveCreatorScenario=()=>{
+    const title=creatorForm.title.trim();
+    if(!title){setCreatorMessage('Donne un titre au scénario.');return;}
+    const questions=creatorForm.questionsText.split('\n').map(line=>line.trim()).filter(Boolean).map(line=>{
+      const parts=line.split('|');
+      return {question:(parts[0]||'').trim(),answer:(parts.slice(1).join('|')||'Réponse à recueillir').trim()};
+    });
+    const splitVehicles=(value)=>value.split(',').map(x=>x.trim().toUpperCase()).filter(Boolean);
+    const scenario={
+      id:'creator-'+Date.now(),title,category:creatorForm.category,difficulty:creatorForm.difficulty,
+      caller:creatorForm.caller.trim(),description:creatorForm.description.trim(),questions,
+      requiredVehicles:splitVehicles(creatorForm.requiredVehicles),
+      recommendedVehicles:splitVehicles(creatorForm.recommendedVehicles),
+      victimTransport:{has_victims:false,victim_count:0,transport_required:false,transport_count:0,destination_type:'nearest'}
+    };
+    setScenarios(list=>[scenario,...list]);
+    try{
+      const local=JSON.parse(localStorage.getItem('cta18_creator_scenarios')||'[]');
+      localStorage.setItem('cta18_creator_scenarios',JSON.stringify([scenario,...(Array.isArray(local)?local:[])]));
+    }catch{}
+    setCreatorMessage('Scénario enregistré : il peut maintenant apparaître aléatoirement pendant les appels.');
+    setCreatorForm({title:'',category:'SAP',difficulty:'Moyen',caller:'',description:'',questionsText:'',requiredVehicles:'VSAV',recommendedVehicles:''});
+  };
 
   const handleAuth=async(e)=>{
     e.preventDefault();
@@ -137,9 +207,10 @@ export default function Home(){
     const candidates=operationalStations.filter(s=>Number.isFinite(s.lat)&&Number.isFinite(s.lon));
     const base=candidates[Math.floor(Math.random()*Math.max(candidates.length,1))];
     const seed=Date.now();
-    const lat=base?base.lat+((((seed%1000)/1000)-.5)*.04):46.6;
-    const lon=base?base.lon+((((Math.floor(seed/1000)%1000)/1000)-.5)*.04):1.88;
-    const address=base?(base.address||('Secteur de '+base.name)):'Localisation opérationnelle';
+    const center=departmentCenter(selectedService?.code);
+    const lat=base?base.lat+((((seed%1000)/1000)-.5)*.018):center.lat;
+    const lon=base?base.lon+((((Math.floor(seed/1000)%1000)/1000)-.5)*.018):center.lon;
+    const address=base?((base.address||('Secteur de '+base.name))+' — SDIS '+selectedService.code):('Secteur opérationnel — SDIS '+selectedService.code);
     setActiveCall({id:String(seed),scenario,address,lat,lon,status:'APPEL ENTRANT',startedAt:seed});
     setCallAccepted(false);setQuestionIndex(0);setSelectedVehicles([]);setEngagedVehicles([]);setWorkflow('map');setActiveTab('map');
   };
@@ -185,6 +256,22 @@ export default function Home(){
     <div className="engagementBar"><div><b>{selectedVehicles.length} véhicule(s) sélectionné(s)</b><p>{selectedVehicles.map(v=>v.type).join(' • ')||'Sélectionnez les moyens à envoyer.'}</p></div><button className="primary" disabled={!selectedVehicles.length} onClick={engageSelected}>ENGAGER LES MOYENS</button></div>
   </section> : null;
 
+  const creatorPanel = creatorMode ? <section className="creatorPanel">
+    <div className="workspaceHead"><div><span>MODE CRÉATEUR</span><h1>Créer un scénario</h1><p>Les scénarios créés ici sont ajoutés aux appels aléatoires.</p></div><button onClick={()=>setCreatorMode(false)}>Fermer</button></div>
+    <div className="creatorGrid">
+      <label>Titre<input value={creatorForm.title} onChange={e=>setCreatorForm(f=>({...f,title:e.target.value}))} placeholder="Ex : Malaise sur la voie publique"/></label>
+      <label>Catégorie<select value={creatorForm.category} onChange={e=>setCreatorForm(f=>({...f,category:e.target.value}))}><option>SAP</option><option>INC</option><option>AVP</option><option>DIV</option><option>RCH</option></select></label>
+      <label>Difficulté<select value={creatorForm.difficulty} onChange={e=>setCreatorForm(f=>({...f,difficulty:e.target.value}))}><option>Facile</option><option>Moyen</option><option>Difficile</option><option>Critique</option></select></label>
+      <label>Appelant<input value={creatorForm.caller} onChange={e=>setCreatorForm(f=>({...f,caller:e.target.value}))} placeholder="Nom ou témoin"/></label>
+      <label className="full">Description<textarea value={creatorForm.description} onChange={e=>setCreatorForm(f=>({...f,description:e.target.value}))} placeholder="Description de la situation..."/></label>
+      <label className="full">Questions et réponses<textarea value={creatorForm.questionsText} onChange={e=>setCreatorForm(f=>({...f,questionsText:e.target.value}))} placeholder={"Une question | Une réponse\nUne autre question | Une autre réponse"}/></label>
+      <label>Véhicules indispensables<input value={creatorForm.requiredVehicles} onChange={e=>setCreatorForm(f=>({...f,requiredVehicles:e.target.value}))} placeholder="VSAV, FPT"/></label>
+      <label>Véhicules recommandés<input value={creatorForm.recommendedVehicles} onChange={e=>setCreatorForm(f=>({...f,recommendedVehicles:e.target.value}))} placeholder="VSR, EPA"/></label>
+    </div>
+    <button className="primary" onClick={saveCreatorScenario}>ENREGISTRER LE SCÉNARIO</button>
+    {creatorMessage&&<p className="creatorMessage">{creatorMessage}</p>}
+  </section> : null;
+
   const synoptic = activeTab==='operations' ? <section className="synoptic"><div className="synopticHead"><span>SYNOPTIQUE DES OPÉRATIONS</span><h1>Interventions en cours</h1></div>{activeCall?<article className="operationRow"><div className="operationNumber">🚨</div><div><b>{activeCall.scenario.title}</b><p>{activeCall.address}</p></div><span>{activeCall.status}</span><span>{engagedVehicles.length} moyen(x)</span><button onClick={()=>{setActiveTab('map');setWorkflow(engagedVehicles.length?'tracking':'treatment')}}>Suivre</button></article>:<div className="emptyState">Aucune intervention en cours.</div>}</section> : activeTab==='means' ? <section className="synoptic"><div className="synopticHead"><span>SYNOPTIQUE DES MOYENS</span><h1>Moyens disponibles</h1></div><div className="metricGrid"><div><b>{operationalStations.length}</b><span>CIS</span></div><div><b>{operationalStations.reduce((n,s)=>n+s.personnel,0)}</b><span>PERSONNELS</span></div><div><b>{totalVehicles}</b><span>ENGINS</span></div></div></section> : null;
 
   if(!player && !authMode) return <main className="landing"><header><b>🚨 CTA <em>18</em></b><div><button onClick={()=>setAuthMode('login')}>Connexion</button><button className="primary" onClick={()=>setAuthMode('signup')}>Commencer à jouer</button></div></header><section className="hero"><span>SIMULATION OPÉRATIONNELLE</span><h1>Gérez les secours.<br/><em>À l’échelle d’un territoire.</em></h1><p>Recevez les appels, traitez les informations, engagez les moyens et suivez les interventions sur la carte.</p><button className="primary big" onClick={()=>setAuthMode('signup')}>▶ COMMENCER À JOUER</button></section></main>;
@@ -194,10 +281,11 @@ export default function Home(){
   if(!selectedService) return <main className="pickerPage"><header className="gameHeader"><b>🚨 CTA <em>18</em></b><span>👤 {playerName}</span></header><section className="picker"><h1>Choisissez votre territoire</h1><p>Choisissez le SDIS que vous souhaitez commander.</p><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Rechercher un département ou un numéro…"/><div className="departmentGrid">{departments.filter(d=>(d.code+' '+d.name).toLowerCase().includes(search.toLowerCase())).map(d=><button key={d.code} onClick={()=>openService({code:d.code,name:'SDIS '+d.code+' — '+d.name})}><b>{d.code}</b><span>{d.name}</span>→</button>)}</div></section></main>;
 
   return <main className="gamePage">
-    <header className="gameHeader"><b>🚨 CTA <em>18</em></b><div className="availability">📞 Disponible <i></i></div><span>👤 {playerName}</span><button onClick={()=>{setSelectedService(null);setActiveCall(null)}}>Quitter</button></header>
+    <header className="gameHeader"><b>🚨 CTA <em>18</em></b><div className="availability">📞 Disponible <i></i></div><button className="creatorButton" onClick={()=>{setCreatorMode(v=>!v);setActiveTab('map')}}>👑 Créateur</button><span>👤 {playerName}</span><button onClick={()=>{setSelectedService(null);setActiveCall(null)}}>Quitter</button></header>
     <div className="statusStrip"><span>{selectedService.name}</span><span>•</span><span>Intervention(s) au total : <b>{activeCall?1:0}</b></span><span>Intervention(s) en cours : <b>{engagedVehicles.length?1:0}</b></span><span>Véhicule(s) engagés : <b>{engagedVehicles.length}</b></span></div>
     <nav className="gameNav"><button className={activeTab==='map'?'active':''} onClick={()=>setActiveTab('map')}>Cartographie</button><button className={activeTab==='operations'?'active':''} onClick={()=>setActiveTab('operations')}>Synoptique des opérations {activeCall&&<i>1</i>}</button><button className={activeTab==='means'?'active':''} onClick={()=>setActiveTab('means')}>Synoptique des moyens</button><button>Options</button><button>Aide</button></nav>
-    {activeTab==='map'?<><section className="mapShell"><OperationalMap stations={operationalStations} fallback={{lat:46.603354,lon:1.888334,zoom:6}} activeIntervention={activeCall} vehicles={engagedVehicles} callAccepted={callAccepted} onTakeCall={takeCall} onRefuseCall={refuseCall}/>{stationsLoading&&<div className="mapMessage">Chargement des centres…</div>}{stationsError&&<div className="mapMessage error">{stationsError}</div>}</section>
+    {creatorPanel}
+    {activeTab==='map'?<><section className="mapShell"><OperationalMap stations={operationalStations} fallback={departmentCenter(selectedService.code)} activeIntervention={activeCall} vehicles={engagedVehicles} callAccepted={callAccepted} onTakeCall={takeCall} onRefuseCall={refuseCall}/>{stationsLoading&&<div className="mapMessage">Chargement des centres…</div>}{stationsError&&<div className="mapMessage error">{stationsError}</div>}</section>
       {activeCall&&workflow==='tracking'&&<section className="trackingCard"><div><span>INTERVENTION EN COURS</span><h2>{activeCall.scenario.title}</h2><p>📍 {activeCall.address}</p></div><div>{engagedVehicles.map(v=><span key={v.id}>🚒 {v.type} — {v.status}</span>)}</div><button className="primary" onClick={()=>setActiveTab('operations')}>Voir le suivi</button></section>}
       {operationPanel}
       {!activeCall&&!operationPanel&&<div className="waiting">🟢 En attente d’un appel — les scénarios apparaissent automatiquement sur la carte.</div>}
