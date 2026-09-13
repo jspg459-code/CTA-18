@@ -38,7 +38,8 @@ const fallbackStationsFor = (code) => {
   if (LOCAL_STATION_FALLBACKS[code]) return LOCAL_STATION_FALLBACKS[code];
   return [];
 };
-\nconst fallbackScenarios = [
+
+const fallbackScenarios = [
   {id:'local-1',title:'Malaise à domicile',category:'SAP',difficulty:'Moyen',caller:'Mme Martin',description:'Une personne est inconsciente mais respire.',questions:[{question:'La personne est-elle consciente ?',answer:'Non, elle ne répond pas.'},{question:'Est-ce qu’elle respire normalement ?',answer:'Oui, sa respiration est présente.'}],requiredVehicles:['VSAV'],recommendedVehicles:[],victimTransport:{has_victims:true,victim_count:1,transport_required:true,transport_count:1,destination_type:'nearest'}},
   {id:'local-2',title:'Accident de la circulation',category:'AVP',difficulty:'Difficile',caller:'Témoin',description:'Deux véhicules sont impliqués sur une route départementale.',questions:[{question:'Combien de véhicules sont impliqués ?',answer:'Deux véhicules.'},{question:'Y a-t-il des victimes bloquées ?',answer:'Une personne ne peut pas sortir du véhicule.'}],requiredVehicles:['VSAV','VSR'],recommendedVehicles:['FPT'],victimTransport:{has_victims:true,victim_count:2,transport_required:true,transport_count:2,destination_type:'nearest'}},
   {id:'local-3',title:'Feu d’habitation',category:'INC',difficulty:'Critique',caller:'Voisin',description:'De la fumée sort d’une maison individuelle.',questions:[{question:'Le feu est-il visible ?',answer:'Oui, au rez-de-chaussée.'},{question:'Les occupants sont-ils évacués ?',answer:'Pas encore confirmé.'}],requiredVehicles:['FPT'],recommendedVehicles:['EPA','VSAV'],victimTransport:{has_victims:false,victim_count:0,transport_required:false}},
