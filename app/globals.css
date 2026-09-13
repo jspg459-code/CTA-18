@@ -439,3 +439,56 @@ footer{background:#171c23;color:#a8b0b8}.footerWrap{padding:28px 0;display:flex;
   .dispatchBottomBar{flex-direction:column;align-items:stretch}
   .dispatchBottomBar .operatorPrimary{width:100%}
 }
+
+
+/* CTA 18 — flux appel entrant > traitement > suivi */
+.incomingCallCard{min-width:250px;display:flex;flex-direction:column;gap:8px;padding:4px}
+.incomingCallLabel{font-size:11px;font-weight:900;letter-spacing:.08em;color:#b11f24}
+.incomingCallCard strong{font-size:18px;color:#172330}
+.incomingCallCard p{margin:0;font-weight:800}
+.incomingCallCard small{color:#65717e}
+.incomingCallActions{display:flex;gap:10px;margin-top:8px}
+.incomingCallActions button{border:0;border-radius:6px;padding:10px 12px;font-weight:800;cursor:pointer}
+.incomingCallActions button:first-child{background:#2446a8;color:#fff}
+.incomingCallActions button:last-child{background:#fff;color:#c94c2e;border:1px solid #e7a27e}
+
+.callTreatmentWorkspace{background:#f7f8fa;color:#27313b;padding:28px;min-height:720px}
+.callTreatmentTitle{font-size:27px;margin:0 0 24px;font-weight:900}
+.callTreatmentGrid{display:grid;grid-template-columns:1.08fr .92fr;gap:20px;align-items:start}
+.callTreatmentCard{background:#fff;border:1px solid #dce2e7;border-radius:8px;padding:18px;box-shadow:0 2px 8px rgba(20,30,40,.04)}
+.callTreatmentCard h3{margin:0 0 14px;font-size:18px}
+.callDataCard{min-height:450px}
+.callDataCard p{margin:9px 0;color:#68737f}
+.callDataCard h4{margin:28px 0 10px}
+.callCategoryRow{display:grid;gap:8px;margin:24px 0 18px}
+.callCategoryRow button,.compactActions button,.notifyActions button{background:#fff;border:1px solid #aebbc6;border-radius:5px;padding:9px 11px;text-align:left;color:#53606d;font-weight:700}
+.callDataCard textarea{width:100%;min-height:115px;border:1px solid #cbd4dc;border-radius:6px;padding:12px;font:inherit;resize:vertical}
+.callDataCard small{display:block;margin-top:12px;color:#71808d}
+.callTreatmentSide{display:grid;gap:16px}
+.questionDisplay{display:grid;gap:8px;color:#5d6975}
+.questionDisplay span{font-size:11px;font-weight:900;color:#9b2e2a}
+.questionDisplay strong{font-size:17px;color:#25303b}
+.questionDisplay p{margin:0}
+.qaControls{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+.qaControls button{min-width:42px;border:1px solid #b6c2cb;border-radius:5px;background:#fff;padding:8px;font-weight:800}
+.qaControls button:disabled{opacity:.4}
+.compactActions,.notifyActions{display:flex;flex-wrap:wrap;gap:8px}
+.notifyActions button:nth-last-child(-n+4){background:#c76561;color:#fff;border-color:#c76561}
+.treatmentDispatchEntry{margin-top:20px;background:#fff;border:1px solid #dce2e7;border-radius:8px;padding:18px;display:flex;align-items:center;justify-content:space-between;gap:20px}
+.treatmentDispatchEntry h3{margin:0 0 5px}
+.treatmentDispatchEntry p{margin:0;color:#68737f}
+.treatmentDispatchEntry .operatorPrimary{white-space:nowrap}
+
+.activeInterventionsScreen .activeInterventionCard{background:#fff;border:1px solid #d9e0e6;border-radius:8px;padding:18px;display:grid;grid-template-columns:auto 1fr;gap:14px;color:#26313b}
+.activeInterventionsScreen .activeInterventionCard>span{font-size:28px}
+.activeInterventionsScreen .activeInterventionCard h3{margin:0 0 8px}
+.activeInterventionsScreen .activeVehicleList{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.activeInterventionsScreen .activeVehicleList span{background:#eef3f5;border:1px solid #d7e0e5;border-radius:5px;padding:7px 9px;font-size:13px}
+
+@media(max-width:850px){
+  .callTreatmentWorkspace{padding:18px 12px}
+  .callTreatmentGrid{grid-template-columns:1fr}
+  .treatmentDispatchEntry{align-items:flex-start;flex-direction:column}
+  .treatmentDispatchEntry .operatorPrimary{width:100%}
+  .incomingCallActions{flex-direction:column}
+}
