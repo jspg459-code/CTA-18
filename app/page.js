@@ -167,6 +167,7 @@ export default function Home() {
   const [selectedStation, setSelectedStation] = useState(null);
   const [ctaView, setCtaView] = useState('map');
   const [activeCall, setActiveCall] = useState(null);
+  const [callAccepted, setCallAccepted] = useState(false);
   const [operatorPanel, setOperatorPanel] = useState('calls');
   const [dispatchVehicles, setDispatchVehicles] = useState([]);
   const [callQuestionIndex, setCallQuestionIndex] = useState(0);
@@ -396,10 +397,27 @@ export default function Home() {
     setActiveCall(call);
     setDispatchVehicles([]);
     setCallQuestionIndex(0);
-    setOperatorPanel('call');
-    // L'appel reste accessible dans la console, mais la carte possède immédiatement sa localisation.
+    setCallAccepted(false);
+    setOperatorPanel('calls');
+    // L'appel apparaît d'abord sur la carte : l'opérateur doit le prendre avant le traitement.
     setCtaView('map');
   };
+  const acceptIncomingCall = () => {
+    if (!activeCall) return;
+    setCallAccepted(true);
+    setActiveCall(call => ({ ...call, status:'TRAITEMENT DE L’APPEL' }));
+    setCallQuestionIndex(0);
+    setOperatorPanel('call');
+    setCtaView('console');
+  };
+  const refuseIncomingCall = () => {
+    setActiveCall(null);
+    setCallAccepted(false);
+    setDispatchVehicles([]);
+    setOperatorPanel('calls');
+    setCtaView('map');
+  };
+
   const dispatchVehicle = (station, type) => {
     if (!activeCall) return;
     const originLat = Number(station.lat);
@@ -425,8 +443,9 @@ export default function Home() {
     if (![originLat,originLon,targetLat,targetLon].every(Number.isFinite)) return;
     setDispatchVehicles(list=>[...list,item]);
     setActiveCall(call=>({...call,status:'MOYENS ENGAGÉS'}));
-    // Après engagement, retour immédiat à la cartographie pour suivre les moyens.
-    setCtaView('map');
+    // Après engagement, l'intervention apparaît dans le suivi opérationnel.
+    setCallAccepted(true);
+    setCtaView('activeInterventions');
   };
   const sendVsavToHospital = (vehicle) => {
     // Le choix de l'hôpital sera relié au plus proche établissement réel chargé par la cartographie.
@@ -452,7 +471,26 @@ const operatorConsole = selectedService ? <div className="operatorConsoleInline"
   <div className="operatorHeader"><div><span className="authTag">POSTE OPÉRATEUR CTA</span><h2>Console opérationnelle</h2></div><div className="operatorStatus">{activeCall ? '🔴 '+activeCall.status : '🟢 EN ATTENTE D’ALERTE'}</div></div>
   <div className="operatorTabs"><button className={operatorPanel==='calls'?'active':''} onClick={()=>setOperatorPanel('calls')}>📞 Appels</button><button className={operatorPanel==='call'?'active':''} onClick={()=>setOperatorPanel('call')}>🎧 Appel en cours</button><button className={operatorPanel==='dispatch'?'active':''} onClick={()=>setOperatorPanel('dispatch')}>🚒 Engagement</button><button className={operatorPanel==='means'?'active':''} onClick={()=>setOperatorPanel('means')}>📊 Moyens</button><button className={operatorPanel==='hospital'?'active':''} onClick={()=>setOperatorPanel('hospital')}>🏥 Transports</button></div>
   {operatorPanel==='calls' && <div className="operatorBody"><h3>📞 Appels entrants</h3><p className="operatorHint">Les scénarios disponibles sont tirés aléatoirement et déclenchent automatiquement un appel pendant la partie.</p><div className="scenarioLaunchGrid">{scenariosLoading ? <div className="scenarioEmpty">Chargement des scénarios…</div> : scenarioError ? <div className="scenarioEmpty">{scenarioError}</div> : scenarios.map(s=><button key={s.id} className="launchScenario" onClick={()=>startScenario(s)}><b>{s.category}</b><strong>{s.title}</strong><small>{s.difficulty} • {s.victimTransport?.has_victims?'Victime(s)':'Sans victime'}</small></button>)}</div>{scenarios.length===0&&<p>Aucun scénario disponible.</p>}</div>}
-  {operatorPanel==='call' && <div className="operatorBody">{!activeCall?<div className="operatorEmpty">Aucun appel actif.</div>:<><div className="callCard"><span>📞 APPELANT</span><h3>{activeCall.scenario.caller||'Témoin'}</h3><p>{activeCall.scenario.description}</p></div>{activeCall.scenario.questions?.length>0&&<div className="qaOperator"><div><span>QUESTION {callQuestionIndex+1}/{activeCall.scenario.questions.length}</span><h3>{activeCall.scenario.questions[callQuestionIndex].question}</h3><p>Réponse : {activeCall.scenario.questions[callQuestionIndex].answer||'À préciser'}</p></div><div className="qaControls"><button disabled={callQuestionIndex===0} onClick={()=>setCallQuestionIndex(i=>i-1)}>←</button><button disabled={callQuestionIndex>=activeCall.scenario.questions.length-1} onClick={()=>setCallQuestionIndex(i=>i+1)}>→</button></div></div>}<button className="operatorPrimary" onClick={()=>setOperatorPanel('dispatch')}>🚒 Passer à l'engagement des moyens</button></>}</div>}
+  {operatorPanel==='call' && <div className="operatorBody callTreatmentWorkspace">{!activeCall?<div className="operatorEmpty">Aucun appel actif.</div>:<>
+    <h2 className="callTreatmentTitle">Traitement des appels</h2>
+    <div className="callTreatmentGrid">
+      <section className="callTreatmentCard callDataCard">
+        <h3>Données des appels</h3>
+        <p><b>Nom :</b> {activeCall.scenario.caller||'Appelant non identifié'}</p>
+        <p>📍 {activeCall.address}</p>
+        <div className="callCategoryRow"><button type="button">{activeCall.scenario.category==='SAP'?'SECOURS À PERSONNE':activeCall.scenario.category}</button><button type="button">{activeCall.scenario.title}</button></div>
+        <h4>Observations</h4>
+        <textarea placeholder="Entrez ici vos observations..." defaultValue={activeCall.scenario.description||''}></textarea>
+        <small>🚒 {activeCall.scenario.requiredVehicles?.length||0} moyen(x) indispensable(s)</small>
+      </section>
+      <div className="callTreatmentSide">
+        <section className="callTreatmentCard"><h3>Questionnement</h3>{activeCall.scenario.questions?.length?<><div className="questionDisplay"><span>QUESTION {callQuestionIndex+1}/{activeCall.scenario.questions.length}</span><strong>{activeCall.scenario.questions[callQuestionIndex].question}</strong><p>{activeCall.scenario.questions[callQuestionIndex].answer||'Réponse à préciser avec l’appelant'}</p></div><div className="qaControls"><button disabled={callQuestionIndex===0} onClick={()=>setCallQuestionIndex(i=>i-1)}>←</button><button disabled={callQuestionIndex>=activeCall.scenario.questions.length-1} onClick={()=>setCallQuestionIndex(i=>i+1)}>→</button></div></>:<button type="button">Question</button>}</section>
+        <section className="callTreatmentCard"><h3>Transfert d'appel</h3><div className="compactActions"><button type="button">Régulation 15-SAMU</button><button type="button">Transfert 15-SAMU</button><button type="button">Transfert 17-Police</button></div></section>
+        <section className="callTreatmentCard"><h3>Avertir les services</h3><div className="notifyActions"><button type="button">15-SAMU</button><button type="button">17-Police / Gendarmerie</button><button type="button">Réseau - Électricité</button><button type="button">Réseau - Gaz</button><button type="button">Officier CODIS</button><button type="button">COZ</button><button type="button">Maire - Municipalité</button><button type="button">Préfecture</button></div></section>
+      </div>
+    </div>
+    <div className="treatmentDispatchEntry"><div><h3>Votre départ</h3><p>Les CIS seront classés automatiquement du plus proche au plus éloigné du lieu de l'intervention.</p></div><button className="operatorPrimary" onClick={()=>setOperatorPanel('dispatch')}>🚒 Choisir et engager les moyens</button></div>
+  </>}</div>}
   {operatorPanel==='dispatch' && <div className="operatorBody dispatchWorkspace">
     <div className="dispatchTitleRow"><div><span className="authTag">ENGAGEMENT OPÉRATIONNEL</span><h3>🚒 Engager les moyens</h3><p>Sélection des moyens disponibles classés automatiquement du CIS le plus proche au plus éloigné.</p></div>{activeCall&&<div className="dispatchLiveBadge">🔴 {activeCall.status}</div>}</div>
     {!activeCall?<div className="operatorEmpty">Aucune intervention sélectionnée.</div>:stationsLoading?<div className="operatorEmpty">⏳ Chargement des CIS disponibles…</div>:stationsError?<div className="operatorEmpty"><p>⚠️ {stationsError}</p><button className="operatorPrimary" onClick={()=>{setStationsError('');setStationsLoading(true);fetch('/api/stations?code='+encodeURIComponent(selectedService.code)+'&retry='+Date.now(),{cache:'no-store'}).then(r=>r.json()).then(data=>{if(Array.isArray(data.stations)&&data.stations.length){setStations(data.stations);setStationsError('')}else setStationsError(data.error||'Aucun centre retourné.');}).catch(()=>setStationsError('Impossible de charger les CIS.')).finally(()=>setStationsLoading(false));}}>🔄 Réessayer</button></div>:operationalStations.length===0?<div className="operatorEmpty"><p>⚠️ Aucun CIS disponible pour le moment.</p><button className="operatorPrimary" onClick={()=>window.location.reload()}>🔄 Recharger les centres</button></div>:<>
@@ -539,6 +577,9 @@ const operatorConsole = selectedService ? <div className="operatorConsoleInline"
                     onStationSelect={setSelectedStation}
                     activeIntervention={activeCall}
                     vehicles={dispatchVehicles}
+                    callAccepted={callAccepted}
+                    onTakeCall={acceptIncomingCall}
+                    onRefuseCall={refuseIncomingCall}
                   />
                   <div className="mapLegendOperational">
                     <div><i className="legendDot green"></i> CIS disponible</div>
