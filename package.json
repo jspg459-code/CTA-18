@@ -1,18 +1,16 @@
 {
-  "name": "cta-18",
-  "version": "0.1.0",
+  "name": "streamtv",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+    "start": "next start"
   },
   "dependencies": {
     "next": "latest",
     "react": "latest",
     "react-dom": "latest",
-    "leaflet": "^1.9.4",
-    "react-leaflet": "^5.0.0"
+    "@supabase/supabase-js": "latest"
   }
 }
