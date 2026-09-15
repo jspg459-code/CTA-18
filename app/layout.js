@@ -1,9 +1,8 @@
 import './globals.css';
-import 'leaflet/dist/leaflet.css';
 
 export const metadata = {
-  title: 'CTA 18',
-  description: 'Jeu de simulation et de gestion des interventions de secours.',
+  title: 'StreamTV — Votre télévision, partout',
+  description: 'Lecteur IPTV personnel pour vos playlists autorisées.',
 };
 
 export default function RootLayout({ children }) {
